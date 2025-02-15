@@ -18,6 +18,8 @@
 #include <Include.duyng/Core/BarManager.mqh>
 #include <Include.duyng/Core/PositionManager.mqh>
 #include <Include.duyng/Core/RiskManager.mqh>
+#include <Include.duyng/Core/TradeExecutor.mqh>
+
 
 
 CTrade trade;
@@ -35,6 +37,7 @@ CButton btnCloseSell;
 
 CPM PM;
 CRM RM;
+CTradeExecutor Trade;
 CBar Bar;
 CiATR ATR;
 CiMA MA;
@@ -44,6 +47,7 @@ CiMA MA;
 //+----------------------------------------------------------+
 sinput group                        "INPUT"
 input int                           slPoints    = 150;
+input ulong                         MagicNumber = 1010;
 
 sinput group                        "RISK MANAGEMENT"
 sinput string                       strMM;                  // :::::   MONEY MANAGEMENT   :::::  
@@ -83,6 +87,9 @@ double btn_width = chart_width * 0.15;   // 25% chiều rộng biểu đồ
 
 int OnInit()
 {  
+    //SET VARIABLES
+    Trade.SetMagicNumber(MagicNumber);
+
     createText("1", string(_Period), 20,20,clrLinen,13,"Arial");
 
     // chart_id   : ID của chart (0 là chart hiện tại)
@@ -98,7 +105,6 @@ int OnInit()
     btnBuy.ColorBackground(C'2, 119, 118');
     btnBuy.ColorBorder(C'4, 82, 81');
     btnBuy.FontSize(11);
-    ObjectSetString(0,BTN_BUY_NAME,OBJPROP_TOOLTIP,"Click to buy");
 
     btnBuyStop.Create(0,BTN_BUY_STOP_NAME,0,60,150,260,190);
     btnBuyStop.Text("BUY STOP");
@@ -120,6 +126,7 @@ int OnInit()
     btnCancelBuy.ColorBackground(C'242, 220, 162');
     btnCancelBuy.ColorBorder(C'4, 82, 81');
     btnCancelBuy.FontSize(7);
+    ObjectSetString(0,BTN_CANCEL_BUY_NAME,OBJPROP_TOOLTIP,"Cancel Pending Order");
 
     btnCloseBuy.Create(0,BTN_CLOSE_BUY_NAME,0,60,280,260,310);
     btnCloseBuy.Text("CLOSE BUY");
@@ -127,7 +134,7 @@ int OnInit()
     btnCloseBuy.ColorBackground(clrWhite);
     btnCloseBuy.ColorBorder(C'4, 82, 81');
     btnCloseBuy.FontSize(9);
-
+    ObjectSetString(0,BTN_CLOSE_BUY_NAME,OBJPROP_TOOLTIP,"Close Buy First");
 
      //BUTTON SELL
     btnSell.Create(0,BTN_SELL_NAME,0,260,100,460,150);
@@ -136,7 +143,6 @@ int OnInit()
     btnSell.ColorBackground(clrDarkRed);
     btnSell.ColorBorder(C'74, 4, 8');
     btnSell.FontSize(11);
-    ObjectSetString(0,BTN_SELL_NAME,OBJPROP_TOOLTIP,"Click to sell");
 
     btnSellStop.Create(0,BTN_SELL_STOP_NAME,0,260,150,460,190);
     btnSellStop.Text("SELL STOP");
@@ -158,6 +164,7 @@ int OnInit()
     btnCancelSell.ColorBackground(C'242, 220, 162');
     btnCancelSell.ColorBorder(C'74, 4, 8');
     btnCancelSell.FontSize(7);
+    ObjectSetString(0,BTN_CANCEL_SELL_NAME,OBJPROP_TOOLTIP,"Cancel Pending Order");
 
     btnCloseSell.Create(0,BTN_CLOSE_SELL_NAME,0,260,280,460,310);
     btnCloseSell.Text("CLOSE SELL");
@@ -165,8 +172,7 @@ int OnInit()
     btnCloseSell.ColorBackground(clrWhite);
     btnCloseSell.ColorBorder(C'74, 4, 8');
     btnCloseSell.FontSize(9);
-
-
+    ObjectSetString(0,BTN_CLOSE_SELL_NAME,OBJPROP_TOOLTIP,"Close Sell First");
 
     ChartRedraw();
 
@@ -188,12 +194,17 @@ void OnDeinit(const int reason)
 
 void OnTick()
 { 
-    Comment("EA #1111111");
-    createText("Text1", "Risk Per Trade: 1%", 40, 40, 8, clrWhite, "Arial");
-    createText("Text2", "Account Balance: 5000$", 40, 65, 8, clrWhite, "Arial");
-    createText("Text3", "Spread: 00", 40, 90, 8, clrWhite, "Arial");
-    createText("Text4", "Open BUY: 0", 40, 115, 8, clrWhite, "Arial");
-    createText("Text5", "Open SELL: 0", 40, 140, 8, clrWhite, "Arial");
+    //Init Indicators
+    //Moving Average
+    MA.RefreshMain();
+    double ma1 = MA.main[1];
+
+    //ATR
+    ATR.RefreshMain();
+    double atr0 = ATR.main[0];
+    double atr1 = ATR.main[1]; 
+    double ATRValue = atr1 * ATRFactor;
+
     //Price
     Bar.Refresh(_Symbol,PERIOD_CURRENT,6);
     double close1 = Bar.Close(1);    
@@ -201,24 +212,40 @@ void OnTick()
     double askPrice = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
     double bidPrice = SymbolInfoDouble(_Symbol, SYMBOL_BID);
 
+    //Stoploss trung bình giá cao nhất của 5 cây nến gần nhất
     double averageHigh = CalculateAverageHigh();
     double stopLossAverageHigh = averageHigh + (slPoints*_Point);
 
-    // Print("Average High of last 5 bars: ", averageHigh);
-
+    //Stoploss trung bình giá thấp nhất của 5 cây nến gần nhất
     double averageLow = CalculateAverageLow();
     double stopLossAverageLow = averageLow - (slPoints*_Point);
-    // Print("average Low of last 5 bars: ", averageLow);
 
-    //Moving Average
-    MA.RefreshMain();
-    double ma1 = MA.main[1];
+    //Lấy thông tin tài khoản
+    Comment("EA Manual Trading; Magic Number: ", MagicNumber);
 
-    //ATR
-    ATR.RefreshMain();
-    double atr1 = ATR.main[1]; 
-    double ATRValue = atr1 * ATRFactor;
+    string strRiskPercent = "Risk Per Trade: " + DoubleToString(RiskPercent, 2) + "%";
+    string strAccountBalance = "Account Balance: " + DoubleToString(AccountInfoDouble(ACCOUNT_BALANCE), 2) + "$";
+    string strSpread = "Spread: " + IntegerToString(SymbolInfoInteger(_Symbol, SYMBOL_SPREAD), 2);
+    string strOpenBuy = "Open Buy: " + IntegerToString(CountOpenBuy());
+    string strOpenSell = "Open Sell: " + IntegerToString(CountOpenSell());
+    
+    //Tạo các label hiển thị thông tin góc phải trên
+    createText("Text1", strRiskPercent, 40, 40, 8, clrWhite, "Arial");
+    createText("Text2", strAccountBalance, 40, 65, 8, clrWhite, "Arial");
+    createText("Text3", strSpread, 40, 90, 8, clrWhite, "Arial");
+    createText("Text4", strOpenBuy, 40, 115, 8, clrWhite, "Arial");
+    createText("Text5", strOpenSell, 40, 140, 8, clrWhite, "Arial");
 
+    //Set tooltip cho các button
+    string strBuy = "Buy giá: " + DoubleToString(SymbolInfoDouble(_Symbol, SYMBOL_ASK),2);
+    ObjectSetString(0,BTN_BUY_NAME,OBJPROP_TOOLTIP,strBuy);
+    ObjectSetString(0,BTN_BUY_STOP_NAME,OBJPROP_TOOLTIP,"Buy Stop");
+    ObjectSetString(0,BTN_BUY_LIMIT_NAME,OBJPROP_TOOLTIP,"Buy Limit");
+
+    string strSell = "Sell giá: " + DoubleToString(SymbolInfoDouble(_Symbol, SYMBOL_BID),2);
+    ObjectSetString(0,BTN_SELL_NAME,OBJPROP_TOOLTIP,strSell);
+    ObjectSetString(0,BTN_SELL_STOP_NAME,OBJPROP_TOOLTIP,"Sell Stop");
+    ObjectSetString(0,BTN_SELL_LIMIT_NAME,OBJPROP_TOOLTIP,"Sell Limit");
     
     if(btnBuy.Pressed())
     {
@@ -227,7 +254,8 @@ void OnTick()
             double volume = RM.MoneyManagement(_Symbol,MoneyManagement,MinLotPerEquitySteps,RiskPercent,MathAbs(askPrice - stopLossAverageLow),FixedVolume,ORDER_TYPE_BUY);
             if(volume > 0)
             {
-                trade.Buy(volume, _Symbol, 0, stopLossAverageLow, 0);
+                // trade.Buy(volume, _Symbol, 0, stopLossAverageLow, 0);
+                Trade.Buy(_Symbol, volume, stopLossAverageLow, 0);
                 Print(__FUNCTION__," > Đã mua ... ");
             }
         } else
@@ -236,7 +264,7 @@ void OnTick()
             double volume = RM.MoneyManagement(_Symbol,MoneyManagement,MinLotPerEquitySteps,RiskPercent,MathAbs(askPrice - stopLossATR),FixedVolume,ORDER_TYPE_BUY);
             if(volume > 0)
             {
-                trade.Buy(volume, _Symbol, 0, stopLossATR, 0);
+                Trade.Buy(_Symbol,volume, stopLossATR, 0);
                 Print(__FUNCTION__," > Đã mua ... ");
             }
         }
@@ -250,7 +278,7 @@ void OnTick()
             double volume = RM.MoneyManagement(_Symbol,MoneyManagement,MinLotPerEquitySteps,RiskPercent,MathAbs(bidPrice - stopLossAverageHigh),FixedVolume,ORDER_TYPE_SELL);
             if(volume > 0)
             {
-                trade.Sell(volume, _Symbol, 0, stopLossAverageHigh, 0);
+                Trade.Sell(_Symbol, volume, stopLossAverageHigh, 0);
                 Print(__FUNCTION__," > Đã bán ... ");
             }
         } else
@@ -259,7 +287,7 @@ void OnTick()
             double volume = RM.MoneyManagement(_Symbol,MoneyManagement,MinLotPerEquitySteps,RiskPercent,MathAbs(askPrice - stopLossATR),FixedVolume,ORDER_TYPE_SELL);
             if(volume > 0)
             {
-                trade.Sell(volume, _Symbol, 0, stopLossATR, 0);
+                Trade.Sell(_Symbol, volume, stopLossATR, 0);
                 Print(__FUNCTION__," > Đã mua ... ");
             }
         }
@@ -295,6 +323,7 @@ void OnTick()
         }
         btnCloseSell.Pressed(false);
     }
+    PM.TrailingStopLossByATR(_Symbol,MagicNumber ,ATRValue, ATRFactor);
 }
 
 bool createText(string pObjName, string pText, int pX, int pY, int pFontsize, color pClrText, string pFont)
@@ -310,13 +339,11 @@ bool createText(string pObjName, string pText, int pX, int pY, int pFontsize, co
       ObjectSetInteger(0,pObjName,OBJPROP_YDISTANCE,pY);
       ObjectSetInteger(0,pObjName,OBJPROP_CORNER,CORNER_RIGHT_UPPER);
       ObjectSetInteger(0,pObjName,OBJPROP_ANCHOR, ANCHOR_RIGHT_UPPER);
-    //   ObjectSetInteger(0,pObjName,OBJPROP_CORNER,CORNER_LEFT_UPPER);
+      // ObjectSetInteger(0,pObjName,OBJPROP_CORNER,CORNER_LEFT_UPPER);
       ObjectSetString(0,pObjName,OBJPROP_TEXT,pText);
       ObjectSetInteger(0,pObjName,OBJPROP_COLOR,pClrText);
       ObjectSetInteger(0,pObjName,OBJPROP_FONTSIZE,pFontsize);
       // ObjectSetInteger(0,pObjName,OBJPROP_FONT,pFont);
-
-
       // ObjectSetInteger(0,pObjName,OBJPROP_XSIZE,100);
       // ObjectSetInteger(0,pObjName,OBJPROP_YSIZE,20);
       return(true);
@@ -332,7 +359,6 @@ double CalculateAverageHigh()
     double high4 = Bar.High(4);
     double high5 = Bar.High(5);
     // Print("High 1: ", high1, " | High 2: ", high2, " | High 3: ", high3, " | High 4: ", high4, " | High 5: ", high5);
-
     // Tính trung bình giá cao nhất
     double averageHigh = (high1 + high2 + high3 + high4 + high5) / 5.0;
 
@@ -348,24 +374,35 @@ double CalculateAverageLow()
     double low4 = Bar.Low(4);
     double low5 = Bar.Low(5);
     // Print("Low 1: ", low1, " | Low 2: ", low2, " | Low 3: ", low3, " | Low 4: ", low4, " | Low 5: ", low5);
-
     // Tính trung bình giá cao nhất
     double averageLow = (low1 + low2 + low3 + low4 + low5) / 5.0;
 
     return averageLow;
 }
 
-
-void CloseFirstBuyPosition()
+int CountOpenBuy()
 {
-    Print(__FUNCTION__, " > close first buy position btn was pressed...");
+    int count = 0;
     for(int i = 0; i < PositionsTotal(); i++)
     {
         if(PositionGetSymbol(i) == _Symbol && PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_BUY)
         {
-            ulong posTicket = PositionGetTicket(i);
-            trade.PositionClose(posTicket);
-            break; // Thoát khỏi vòng lặp sau khi đóng lệnh đầu tiên
+            count++;
         }
     }
+    return count;
 }
+
+int CountOpenSell()
+{
+    int count = 0;
+    for(int i = 0; i < PositionsTotal(); i++)
+    {
+        if(PositionGetSymbol(i) == _Symbol && PositionGetInteger(POSITION_TYPE) == POSITION_TYPE_SELL)
+        {
+            count++;
+        }
+    }
+    return count;
+}
+
