@@ -107,28 +107,28 @@ int OnInit()
     // x2, y2     : Tọa độ góc dưới/phải
     
     //BUTTON BUY
-    btnBuy.Create(0, BTN_BUY_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.10), int(chart_width * 0.15), int(chart_height * 0.15));
+    btnBuy.Create(0, BTN_BUY_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.10), int(chart_width * 0.13), int(chart_height * 0.15));
     btnBuy.Text("BUY");
     btnBuy.Color(clrWhite);
     btnBuy.ColorBackground(C'2, 119, 118');
     btnBuy.ColorBorder(C'4, 82, 81');
     btnBuy.FontSize(11);
 
-    btnBuyStop.Create(0, BTN_BUY_STOP_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.15), int(chart_width * 0.15), int(chart_height * 0.20));
+    btnBuyStop.Create(0, BTN_BUY_STOP_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.15), int(chart_width * 0.13), int(chart_height * 0.20));
     btnBuyStop.Text("BUY STOP");
     btnBuyStop.Color(clrWhite);
     btnBuyStop.ColorBackground(C'2, 119, 118');
     btnBuyStop.ColorBorder(C'4, 82, 81');
     btnBuyStop.FontSize(9);
 
-    btnBuyLimit.Create(0, BTN_BUY_LIMIT_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.20), int(chart_width * 0.15), int(chart_height * 0.25));
+    btnBuyLimit.Create(0, BTN_BUY_LIMIT_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.20), int(chart_width * 0.13), int(chart_height * 0.25));
     btnBuyLimit.Text("BUY LIMIT");
     btnBuyLimit.Color(clrWhite);
     btnBuyLimit.ColorBackground(C'2, 119, 118');
     btnBuyLimit.ColorBorder(C'4, 82, 81');
     btnBuyLimit.FontSize(9);
 
-    btnCancelBuy.Create(0, BTN_CANCEL_BUY_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.25), int(chart_width * 0.15), int(chart_height * 0.30));
+    btnCancelBuy.Create(0, BTN_CANCEL_BUY_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.27), int(chart_width * 0.13), int(chart_height * 0.30));
     btnCancelBuy.Text("CANCEL BUY ORDER");
     btnCancelBuy.Color(C'2, 119, 118');
     btnCancelBuy.ColorBackground(C'242, 220, 162');
@@ -136,7 +136,7 @@ int OnInit()
     btnCancelBuy.FontSize(7);
     ObjectSetString(0, BTN_CANCEL_BUY_NAME, OBJPROP_TOOLTIP, "Cancel Pending Order");
 
-    btnCloseBuy.Create(0, BTN_CLOSE_BUY_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.30), int(chart_width * 0.15), int(chart_height * 0.35));
+    btnCloseBuy.Create(0, BTN_CLOSE_BUY_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.30), int(chart_width * 0.13), int(chart_height * 0.34));
     btnCloseBuy.Text("CLOSE BUY");
     btnCloseBuy.Color(C'2, 119, 118');
     btnCloseBuy.ColorBackground(clrWhite);
@@ -145,40 +145,40 @@ int OnInit()
     ObjectSetString(0, BTN_CLOSE_BUY_NAME, OBJPROP_TOOLTIP, "Close Buy First");
 
     //BUTTON SELL
-    btnSell.Create(0, BTN_SELL_NAME, 0, int(chart_width * 0.15), int(chart_height * 0.10), int(chart_width * 0.30), int(chart_height * 0.15));
+    btnSell.Create(0, BTN_SELL_NAME, 0, int(chart_width * 0.13), int(chart_height * 0.10), int(chart_width * 0.25), int(chart_height * 0.15));
     btnSell.Text("SELL");
     btnSell.Color(clrWhite);
     btnSell.ColorBackground(clrDarkRed);
-    btnSell.ColorBorder(C'74, 4, 8');
+    btnSell.ColorBorder(C'41,39,38');
     btnSell.FontSize(11);
 
-    btnSellStop.Create(0, BTN_SELL_STOP_NAME, 0, int(chart_width * 0.15), int(chart_height * 0.15), int(chart_width * 0.30), int(chart_height * 0.20));
+    btnSellStop.Create(0, BTN_SELL_STOP_NAME, 0, int(chart_width * 0.13), int(chart_height * 0.15), int(chart_width * 0.25), int(chart_height * 0.20));
     btnSellStop.Text("SELL STOP");
     btnSellStop.Color(clrWhite);
     btnSellStop.ColorBackground(clrDarkRed);
-    btnSellStop.ColorBorder(C'74, 4, 8');
+    btnSellStop.ColorBorder(C'41,39,38');
     btnSellStop.FontSize(9);
 
-    btnSellLimit.Create(0, BTN_SELL_LIMIT_NAME, 0, int(chart_width * 0.15), int(chart_height * 0.20), int(chart_width * 0.30), int(chart_height * 0.25));
+    btnSellLimit.Create(0, BTN_SELL_LIMIT_NAME, 0, int(chart_width * 0.13), int(chart_height * 0.20), int(chart_width * 0.25), int(chart_height * 0.25));
     btnSellLimit.Text("SELL LIMIT");
     btnSellLimit.Color(clrWhite);
     btnSellLimit.ColorBackground(clrDarkRed);
-    btnSellLimit.ColorBorder(C'74, 4, 8');
+    btnSellLimit.ColorBorder(C'41,39,38');
     btnSellLimit.FontSize(9);
 
-    btnCancelSell.Create(0, BTN_CANCEL_SELL_NAME, 0, int(chart_width * 0.15), int(chart_height * 0.25), int(chart_width * 0.30), int(chart_height * 0.30));
+    btnCancelSell.Create(0, BTN_CANCEL_SELL_NAME, 0, int(chart_width * 0.13), int(chart_height * 0.27), int(chart_width * 0.25), int(chart_height * 0.30));
     btnCancelSell.Text("CANCEL SELL ORDER");
     btnCancelSell.Color(clrDarkRed);
     btnCancelSell.ColorBackground(C'242, 220, 162');
-    btnCancelSell.ColorBorder(C'74, 4, 8');
+    btnCancelSell.ColorBorder(C'41,39,38');
     btnCancelSell.FontSize(7);
     ObjectSetString(0, BTN_CANCEL_SELL_NAME, OBJPROP_TOOLTIP, "Cancel Pending Order");
 
-    btnCloseSell.Create(0, BTN_CLOSE_SELL_NAME, 0, int(chart_width * 0.15), int(chart_height * 0.30), int(chart_width * 0.30), int(chart_height * 0.35));
+    btnCloseSell.Create(0, BTN_CLOSE_SELL_NAME, 0, int(chart_width * 0.13), int(chart_height * 0.30), int(chart_width * 0.25), int(chart_height * 0.34));
     btnCloseSell.Text("CLOSE SELL");
     btnCloseSell.Color(clrDarkRed);
     btnCloseSell.ColorBackground(clrWhite);
-    btnCloseSell.ColorBorder(C'74, 4, 8');
+    btnCloseSell.ColorBorder(C'41,39,38');
     btnCloseSell.FontSize(9);
     ObjectSetString(0, BTN_CLOSE_SELL_NAME, OBJPROP_TOOLTIP, "Close Sell First");
 
@@ -277,19 +277,13 @@ void OnTick()
     string strOpenBuy           = "Open Buy: " + IntegerToString(CountOpenBuy());
     string strOpenSell          = "Open Sell: " + IntegerToString(CountOpenSell());
     
-    //Tạo các label hiển thị thông tin góc phải trên
-    // createText("Text1", strBalanceAndRisk, 40, 40, 8, clrWhite, "Arial");
-    // createText("Text2", strMaxDrawdown, 40, 65, 8, clrWhite, "Arial");
-    // createText("Text3", strSpread, 40, 90, 8, clrWhite, "Arial");
-    // createText("Text4", strOpenBuy, 40, 115, 8, clrWhite, "Arial");
-    // createText("Text5", strOpenSell, 40, 140, 8, clrWhite, "Arial");
 
     // Tạo các label hiển thị thông tin góc phải trên
-    createText("Text1", strBalanceAndRisk, int(chart_width * 0.02), int(chart_height * 0.06), 8, clrWhite, "Arial");
-    createText("Text2", strMaxDrawdown, int(chart_width * 0.02), int(chart_height * 0.10), 8, clrWhite, "Arial");
-    createText("Text3", strSpread, int(chart_width * 0.02), int(chart_height * 0.14), 8, clrWhite, "Arial");
-    createText("Text4", strOpenBuy, int(chart_width * 0.02), int(chart_height * 0.18), 8, clrWhite, "Arial");
-    createText("Text5", strOpenSell, int(chart_width * 0.02), int(chart_height * 0.22), 8, clrWhite, "Arial");
+    createText("Text1", strBalanceAndRisk, int(chart_width * 0.01), int(chart_height * 0.05), 8, C'123,109,98', "Arial");
+    createText("Text2", strMaxDrawdown, int(chart_width * 0.01), int(chart_height * 0.08), 8, C'123,109,98', "Arial");
+    createText("Text3", strSpread, int(chart_width * 0.01), int(chart_height * 0.11), 8, C'123,109,98', "Arial");
+    createText("Text4", strOpenBuy, int(chart_width * 0.01), int(chart_height * 0.14), 8, C'123,109,98', "Arial");
+    createText("Text5", strOpenSell, int(chart_width * 0.01), int(chart_height * 0.17), 8, C'123,109,98', "Arial");
 
     
     //Set tooltip cho các button
