@@ -47,7 +47,7 @@ sinput group                        "INPUT"
 input int                           slPoints                = 150; // Điểm dừng lỗ 5Bar+Points (nếu = 0, sử dụng ATR)
 input ulong                         MagicNumber             = 1010; // Số Magic (Magic Number)
 input ushort                        POExpirationMinutes     = 60; // Time hết hạn cho lệnh chờ (Pending Order Expiration Minutes)
-input double                        MaxDrawdownDaily        = -5; // Max Drawdown trong ngày (%)
+input double                        MaxDrawdownDaily        = 0; // Max Drawdown trong ngày (nếu = 0 tắt chức năng, -5 = 5%)
 
 sinput group                        "RISK MANAGEMENT"
 sinput string                       strMM; 
@@ -243,15 +243,18 @@ void OnTick()
     // Cập nhật giá trị Drawdown
     UpdateMaxDrawdown(); 
     double currentMDD = GetCurrentDrawdown(); // Lấy giá trị Drawdown hiện tại
-    // Nếu Drawdown trong ngày vượt quá -5%, không cho mở lệnh
-    if (currentMDD <= MaxDrawdownDaily) 
+
+    // Nếu Drawdown trong ngày vượt quá -5%, không cho mở lệnh mới
+    if (MaxDrawdownDaily > 0)
     {
-        string message = "Max Drawdown to " + DoubleToString(currentMDD, 2) + "%, Stop trading on EA!";
-        // SendTelegramMessage(message); // Gửi thông báo Telegram
-        Comment(message);
-        return; 
-    }
-    // Nếu chưa đạt Max Drawdown, tiếp tục giao dịch....
+        if(currentMDD >= MaxDrawdownDaily)
+        {
+            string message = "Max Drawdown to " + DoubleToString(currentMDD, 2) + "%, Stop trading on EA!";
+            // SendTelegramMessage(message); // Gửi thông báo Telegram
+            Comment(message);
+            return; 
+        }
+    } // Nếu chưa đạt Max Drawdown, tiếp tục giao dịch....
 
     //Stoploss trung bình giá cao nhất của 5 cây nến gần nhất
     double averageHigh = CalculateAverageHigh();
@@ -270,7 +273,7 @@ void OnTick()
     string strAccountBalance    = "Account Balance: " + DoubleToString(AccountInfoDouble(ACCOUNT_BALANCE), 2) + "$";
     string strBalanceAndRisk    = "Account Balance: " + DoubleToString(AccountInfoDouble(ACCOUNT_BALANCE), 2) + "$ | Risk: " + DoubleToString(RiskPercent, 2) + "%";
     string strSpread            = "Spread: " + IntegerToString(SymbolInfoInteger(_Symbol, SYMBOL_SPREAD), 2) + " points";
-    string strMaxDrawdown       = "Max Drawdown: " + DoubleToString(currentMDD, 2) + "%";
+    string strMaxDrawdown       = "Max Drawdown Daily: " + DoubleToString(currentMDD, 2) + "%";
     string strOpenBuy           = "Open Buy: " + IntegerToString(CountOpenBuy());
     string strOpenSell          = "Open Sell: " + IntegerToString(CountOpenSell());
     
