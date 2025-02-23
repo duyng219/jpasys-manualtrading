@@ -113,3 +113,29 @@ double btn_width = chart_width * 0.15;   // 15% chiều rộng biểu đồ
 
 //     return(INIT_SUCCEEDED);
 // }
+
+
+//Hàm CreateText chưa sửa
+bool createText(string pObjName, string pText, int pX, int pY, int pFontsize, color pClrText, string pFont)
+{
+   ResetLastError();
+   if(!ObjectCreate(0,pObjName,OBJ_LABEL,0,0,0))
+   {
+      Print(__FUNCTION__,"Error creating object ", GetLastError());
+      return(false);
+   }
+   else{
+      ObjectSetInteger(0,pObjName,OBJPROP_XDISTANCE,pX);
+      ObjectSetInteger(0,pObjName,OBJPROP_YDISTANCE,pY);
+      ObjectSetInteger(0,pObjName,OBJPROP_CORNER,CORNER_RIGHT_UPPER);
+      ObjectSetInteger(0,pObjName,OBJPROP_ANCHOR, ANCHOR_RIGHT_UPPER);
+      // ObjectSetInteger(0,pObjName,OBJPROP_CORNER,CORNER_LEFT_UPPER);
+      ObjectSetString(0,pObjName,OBJPROP_TEXT,pText);
+      ObjectSetInteger(0,pObjName,OBJPROP_COLOR,pClrText);
+      ObjectSetInteger(0,pObjName,OBJPROP_FONTSIZE,pFontsize);
+      // ObjectSetInteger(0,pObjName,OBJPROP_FONT,pFont);
+      // ObjectSetInteger(0,pObjName,OBJPROP_XSIZE,100);
+      // ObjectSetInteger(0,pObjName,OBJPROP_YSIZE,20);
+      return(true);
+   }
+}

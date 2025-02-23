@@ -20,8 +20,6 @@
 #include <jpasys-includecore/Core/RiskManager.mqh>
 #include <jpasys-includecore/Core/TradeExecutor.mqh>
 
-
-
 CTrade trade;
 CButton btnBuy;
 CButton btnBuyStop;
@@ -271,17 +269,24 @@ void OnTick()
     string strRiskPercent       = "Risk: " + DoubleToString(RiskPercent, 2) + "%";
     string strAccountBalance    = "Account Balance: " + DoubleToString(AccountInfoDouble(ACCOUNT_BALANCE), 2) + "$";
     string strBalanceAndRisk    = "Account Balance: " + DoubleToString(AccountInfoDouble(ACCOUNT_BALANCE), 2) + "$ | Risk: " + DoubleToString(RiskPercent, 2) + "%";
-    string strSpread            = "Spread: " + IntegerToString(SymbolInfoInteger(_Symbol, SYMBOL_SPREAD), 2);
+    string strSpread            = "Spread: " + IntegerToString(SymbolInfoInteger(_Symbol, SYMBOL_SPREAD), 2) + " points";
     string strMaxDrawdown       = "Max Drawdown: " + DoubleToString(currentMDD, 2) + "%";
     string strOpenBuy           = "Open Buy: " + IntegerToString(CountOpenBuy());
     string strOpenSell          = "Open Sell: " + IntegerToString(CountOpenSell());
     
     //Tạo các label hiển thị thông tin góc phải trên
-    createText("Text1", strBalanceAndRisk, 40, 40, 8, clrWhite, "Arial");
-    createText("Text2", strMaxDrawdown, 40, 65, 8, clrWhite, "Arial");
-    createText("Text3", strSpread, 40, 90, 8, clrWhite, "Arial");
-    createText("Text4", strOpenBuy, 40, 115, 8, clrWhite, "Arial");
-    createText("Text5", strOpenSell, 40, 140, 8, clrWhite, "Arial");
+    // createText("Text1", strBalanceAndRisk, 40, 40, 8, clrWhite, "Arial");
+    // createText("Text2", strMaxDrawdown, 40, 65, 8, clrWhite, "Arial");
+    // createText("Text3", strSpread, 40, 90, 8, clrWhite, "Arial");
+    // createText("Text4", strOpenBuy, 40, 115, 8, clrWhite, "Arial");
+    // createText("Text5", strOpenSell, 40, 140, 8, clrWhite, "Arial");
+
+    // Tạo các label hiển thị thông tin góc phải trên
+    createText("Text1", strBalanceAndRisk, int(chart_width * 0.02), int(chart_height * 0.06), 8, clrWhite, "Arial");
+    createText("Text2", strMaxDrawdown, int(chart_width * 0.02), int(chart_height * 0.10), 8, clrWhite, "Arial");
+    createText("Text3", strSpread, int(chart_width * 0.02), int(chart_height * 0.14), 8, clrWhite, "Arial");
+    createText("Text4", strOpenBuy, int(chart_width * 0.02), int(chart_height * 0.18), 8, clrWhite, "Arial");
+    createText("Text5", strOpenSell, int(chart_width * 0.02), int(chart_height * 0.22), 8, clrWhite, "Arial");
 
     
     //Set tooltip cho các button
