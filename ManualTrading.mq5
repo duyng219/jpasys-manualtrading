@@ -14,11 +14,11 @@
 #include <Controls/Button.mqh>
 #include <Controls/Label.mqh>
 
-#include <Include.duyng/Indicator/Indicators.mqh>
-#include <Include.duyng/Core/BarManager.mqh>
-#include <Include.duyng/Core/PositionManager.mqh>
-#include <Include.duyng/Core/RiskManager.mqh>
-#include <Include.duyng/Core/TradeExecutor.mqh>
+#include <jpasys-includecore/Indicator/Indicators.mqh>
+#include <jpasys-includecore/Core/BarManager.mqh>
+#include <jpasys-includecore/Core/PositionManager.mqh>
+#include <jpasys-includecore/Core/RiskManager.mqh>
+#include <jpasys-includecore/Core/TradeExecutor.mqh>
 
 
 
