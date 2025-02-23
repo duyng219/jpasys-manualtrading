@@ -79,17 +79,21 @@ input double                        ATRFactorPO             = 1.2; // Hệ số 
 #define BTN_CANCEL_SELL_NAME "Btn Cancel Sell"
 #define BTN_CLOSE_SELL_NAME "Btn Close Sell"
 
-// Biến toàn cục để theo dõi Equity cao nhất & thấp nhất trong ngày
-double maxEquityToday = 0.0;
-double minEquityToday = 0.0;
-datetime lastResetTime = 0; // Thời điểm reset khi qua ngày
+// Biến toàn cục để theo dõi Equity cao nhất & thấp nhất trong ngày & tháng
+double      maxEquityToday = 0.0;
+double      minEquityToday = 0.0;
+datetime    lastResetDaily = 0; // Thời điểm reset khi qua ngày
+
+double      maxEquityMonth = 0.0;
+double      minEquityMonth = 0.0;
+int         lastResetMonth = 0;
 
 // Lấy kích thước biểu đồ
-int chart_width = (int)ChartGetInteger(0, CHART_WIDTH_IN_PIXELS);
-int chart_height = (int)ChartGetInteger(0, CHART_HEIGHT_IN_PIXELS);
+int         chart_width     = (int)ChartGetInteger(0, CHART_WIDTH_IN_PIXELS);
+int         chart_height    = (int)ChartGetInteger(0, CHART_HEIGHT_IN_PIXELS);
 // Top menu buttons
-double btn_height = chart_height * 0.05;  // 5% chiều cao biểu đồ
-double btn_width = chart_width * 0.15;   // 25% chiều rộng biểu đồ
+double      btn_height      = chart_height * 0.05;  // 5% chiều cao biểu đồ
+double      btn_width       = chart_width * 0.15;   // 25% chiều rộng biểu đồ
 
 
 
@@ -214,6 +218,7 @@ void OnDeinit(const int reason)
     ObjectDelete(0, "Text3");
     ObjectDelete(0, "Text4");
     ObjectDelete(0, "Text5");
+    ObjectDelete(0, "Text6");
 
     // Xóa đoạn text Comment
     Comment("");
@@ -240,16 +245,20 @@ void OnTick()
     double askPrice = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
     double bidPrice = SymbolInfoDouble(_Symbol, SYMBOL_BID);
 
-    // Cập nhật giá trị Drawdown
-    UpdateMaxDrawdown(); 
-    double currentMDD = GetCurrentDrawdown(); // Lấy giá trị Drawdown hiện tại
+    // Cập nhật giá trị Max Drawdown
+    UpdateMaxDrawdownDaily();   // Cập nhật Drawdown trong ngày
+    UpdateMaxDrawdownMonthly(); // Cập nhật Drawdown trong tháng
+
+    // Lấy giá trị Drawdown hiện tại
+    double dailyDD   = GetCurrentDrawdownDaily();
+    double monthlyDD = GetCurrentDrawdownMonthly();
 
     // Nếu Drawdown trong ngày vượt quá -5%, không cho mở lệnh mới
     if (MaxDrawdownDaily > 0)
     {
-        if(currentMDD >= MaxDrawdownDaily)
+        if(dailyDD >= MaxDrawdownDaily)
         {
-            string message = "Max Drawdown to " + DoubleToString(currentMDD, 2) + "%, Stop trading on EA!";
+            string message = "Max Drawdown to " + DoubleToString(dailyDD, 2) + "%, Stop trading on EA!";
             // SendTelegramMessage(message); // Gửi thông báo Telegram
             Comment(message);
             return; 
@@ -257,34 +266,32 @@ void OnTick()
     } // Nếu chưa đạt Max Drawdown, tiếp tục giao dịch....
 
     //Stoploss trung bình giá cao nhất của 5 cây nến gần nhất
-    double averageHigh = CalculateAverageHigh();
-    double stopLossAverageHigh = averageHigh + (slPoints*_Point);
-
+    double averageHigh          = CalculateAverageHigh();
+    double stopLossAverageHigh  = averageHigh + (slPoints*_Point);
 
     //Stoploss trung bình giá thấp nhất của 5 cây nến gần nhất
-    double averageLow = CalculateAverageLow();
-    double stopLossAverageLow = averageLow - (slPoints*_Point);
+    double averageLow           = CalculateAverageLow();
+    double stopLossAverageLow   = averageLow - (slPoints*_Point);
 
     //Lấy thông tin tài khoản
     Comment("EA Manual Trading; Magic Number: ", MagicNumber);
-
 
     string strRiskPercent       = "Risk: " + DoubleToString(RiskPercent, 2) + "%";
     string strAccountBalance    = "Account Balance: " + DoubleToString(AccountInfoDouble(ACCOUNT_BALANCE), 2) + "$";
     string strBalanceAndRisk    = "Account Balance: " + DoubleToString(AccountInfoDouble(ACCOUNT_BALANCE), 2) + "$ | Risk: " + DoubleToString(RiskPercent, 2) + "%";
     string strSpread            = "Spread: " + IntegerToString(SymbolInfoInteger(_Symbol, SYMBOL_SPREAD), 2) + " points";
-    string strMaxDrawdown       = "Max Drawdown Daily: " + DoubleToString(currentMDD, 2) + "%";
+    string strMaxDDDaily        = "Max Drawdown Daily: " + DoubleToString(dailyDD, 2) + "%";
+    string strMaxDDMonthly      = "Max Drawdown Monthly: " + DoubleToString(monthlyDD, 2) + "%";
     string strOpenBuy           = "Open Buy: " + IntegerToString(CountOpenBuy());
     string strOpenSell          = "Open Sell: " + IntegerToString(CountOpenSell());
-    
 
     // Tạo các label hiển thị thông tin góc phải trên
-    createText("Text1", strBalanceAndRisk, int(chart_width * 0.01), int(chart_height * 0.05), 8, C'193,191,184', "Arial");
-    createText("Text2", strMaxDrawdown, int(chart_width * 0.01), int(chart_height * 0.08), 8, C'193,191,184', "Arial");
-    createText("Text3", strSpread, int(chart_width * 0.01), int(chart_height * 0.11), 8, C'193,191,184', "Arial");
-    createText("Text4", strOpenBuy, int(chart_width * 0.01), int(chart_height * 0.14), 8, C'193,191,184', "Arial");
-    createText("Text5", strOpenSell, int(chart_width * 0.01), int(chart_height * 0.17), 8, C'193,191,184', "Arial");
-
+    createText("Text1", strBalanceAndRisk,      int(chart_width * 0.01), int(chart_height * 0.05), 8, C'193,191,184', "Arial");
+    createText("Text2", strMaxDDDaily,          int(chart_width * 0.01), int(chart_height * 0.08), 8, C'193,191,184', "Arial");
+    createText("Text3", strMaxDDMonthly,        int(chart_width * 0.01), int(chart_height * 0.11), 8, C'193,191,184', "Arial");
+    createText("Text4", strSpread,              int(chart_width * 0.01), int(chart_height * 0.14), 8, C'193,191,184', "Arial");
+    createText("Text5", strOpenBuy,             int(chart_width * 0.01), int(chart_height * 0.17), 8, C'193,191,184', "Arial");
+    createText("Text6", strOpenSell,            int(chart_width * 0.01), int(chart_height * 0.20), 8, C'193,191,184', "Arial");
     
     //Set tooltip cho các button
     string strBuy = "Buy giá: " + DoubleToString(SymbolInfoDouble(_Symbol, SYMBOL_ASK),5);
@@ -525,8 +532,8 @@ int CountOpenSell()
     return count;
 }
 
-// Hàm cập nhật giá trị Max Drawdown
-void UpdateMaxDrawdown()
+// Hàm cập nhật giá trị Max Drawdown ngày
+void UpdateMaxDrawdownDaily()
 {
     double currentEquity = AccountInfoDouble(ACCOUNT_EQUITY);
     datetime now = TimeCurrent();
@@ -534,11 +541,11 @@ void UpdateMaxDrawdown()
     TimeToStruct(now, timeStruct);
 
     // Nếu là ngày mới, reset giá trị maxEquity và minEquity
-    if (lastResetTime == 0 || (timeStruct.hour == 0 && timeStruct.min == 0)) 
+    if (lastResetDaily == 0 || (timeStruct.hour == 0 && timeStruct.min == 0)) 
     {
         maxEquityToday = currentEquity;
         minEquityToday = currentEquity;
-        lastResetTime = now;
+        lastResetDaily = now;
     }
 
     // Cập nhật max và min equity trong ngày
@@ -547,27 +554,71 @@ void UpdateMaxDrawdown()
     if (currentEquity < minEquityToday)
         minEquityToday = currentEquity;
 }
+// Hàm cập nhật giá trị Max Drawdown tháng
+void UpdateMaxDrawdownMonthly()
+{
+    double currentEquity = AccountInfoDouble(ACCOUNT_EQUITY);
+    datetime now = TimeCurrent();
+    MqlDateTime timeStruct;
+    TimeToStruct(now, timeStruct);
 
-// Hàm trả về giá trị Max Drawdown hiện tại (%)
-double GetCurrentDrawdown()
+    // Nếu sang tháng mới, reset giá trị maxEquity và minEquity
+    if (lastResetMonth == 0 || timeStruct.mon != lastResetMonth) 
+    {
+        maxEquityMonth = currentEquity;
+        minEquityMonth = currentEquity;
+        lastResetMonth = timeStruct.mon;
+    }
+
+    // Cập nhật max và min equity trong tháng
+    if (currentEquity > maxEquityMonth)
+        maxEquityMonth = currentEquity;
+    if (currentEquity < minEquityMonth)
+        minEquityMonth = currentEquity;
+}
+
+// Hàm trả về giá trị Max Drawdown trong ngày
+double GetCurrentDrawdownDaily()
 {
     if (maxEquityToday == 0) return 0.0; // Tránh chia cho 0
 
     double drawdownPercent = ((minEquityToday - maxEquityToday) / maxEquityToday) * 100.0;
     return drawdownPercent; // Trả về giá trị MDD hiện tại (%)
 }
+// Hàm trả về giá trị Max Drawdown trong tháng
+double GetCurrentDrawdownMonthly()
+{
+    if (maxEquityMonth == 0) return 0.0; // Tránh chia cho 0
+
+    double drawdownPercent = ((minEquityMonth - maxEquityMonth) / maxEquityMonth) * 100.0;
+    return drawdownPercent; // Trả về giá trị MDD hiện tại của tháng (%)
+}
+
+// Hàm kiểm tra xem Drawdown có vượt quá mức cho phép không
+// bool IsMaxDrawdownExceeded()
+// {
+//     double dailyDD = GetCurrentDrawdownDaily();
+//     double monthlyDD = GetCurrentDrawdownMonthly();
+
+//     if (dailyDD <= maxDailyDrawdown || monthlyDD <= maxMonthlyDrawdown) 
+//     {
+//         Print("Drawdown vượt mức giới hạn! Dừng giao dịch.");
+//         return true;
+//     }
+//     return false;
+// }
 
 // Hàm gửi tin nhắn Telegram
 // void SendTelegramMessage(string message) 
 // {
-//     string botToken = "7826196467:AAGmlJcO4_EREt9NU30bWM4W1lQlDWoUOZM";   // 🔹 Thay bằng token từ BotFather
-//     string chatID   = "1349135415";     // 🔹 Thay bằng Chat ID của bạn
+//     string botToken = "7826196467:AAGmlJcO4_EREt9NU30bWM4W1lQlDWoUOZM";   // Thay bằng token từ BotFather
+//     string chatID   = "1349135415";     // Thay bằng Chat ID của bạn
 
 //     string url = "https://api.telegram.org/bot" + botToken + "/sendMessage";
 //     string data = "chat_id=" + chatID + "&text=" + message;
     
 //     char requestData[];
-//     StringToCharArray(data, requestData); // ✅ Chuyển `string` thành `char[]` đúng chuẩn
+//     StringToCharArray(data, requestData); // Chuyển `string` thành `char[]` đúng chuẩn
     
 //     char result[];
 //     string result_headers;
@@ -580,7 +631,7 @@ double GetCurrentDrawdown()
 
 //     if(res == -1)
 //     {
-//         Print("❌ Telegram gửi lỗi: ", GetLastError());
+//         Print("Telegram gửi lỗi: ", GetLastError());
 //     }
 //     else
 //     {
