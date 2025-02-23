@@ -279,11 +279,11 @@ void OnTick()
     
 
     // Tạo các label hiển thị thông tin góc phải trên
-    createText("Text1", strBalanceAndRisk, int(chart_width * 0.01), int(chart_height * 0.05), 8, C'123,109,98', "Arial");
-    createText("Text2", strMaxDrawdown, int(chart_width * 0.01), int(chart_height * 0.08), 8, C'123,109,98', "Arial");
-    createText("Text3", strSpread, int(chart_width * 0.01), int(chart_height * 0.11), 8, C'123,109,98', "Arial");
-    createText("Text4", strOpenBuy, int(chart_width * 0.01), int(chart_height * 0.14), 8, C'123,109,98', "Arial");
-    createText("Text5", strOpenSell, int(chart_width * 0.01), int(chart_height * 0.17), 8, C'123,109,98', "Arial");
+    createText("Text1", strBalanceAndRisk, int(chart_width * 0.01), int(chart_height * 0.05), 8, C'193,191,184', "Arial");
+    createText("Text2", strMaxDrawdown, int(chart_width * 0.01), int(chart_height * 0.08), 8, C'193,191,184', "Arial");
+    createText("Text3", strSpread, int(chart_width * 0.01), int(chart_height * 0.11), 8, C'193,191,184', "Arial");
+    createText("Text4", strOpenBuy, int(chart_width * 0.01), int(chart_height * 0.14), 8, C'193,191,184', "Arial");
+    createText("Text5", strOpenSell, int(chart_width * 0.01), int(chart_height * 0.17), 8, C'193,191,184', "Arial");
 
     
     //Set tooltip cho các button
