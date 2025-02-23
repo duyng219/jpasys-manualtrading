@@ -49,6 +49,7 @@ sinput group                        "INPUT"
 input int                           slPoints                = 150; // Điểm dừng lỗ 5Bar+Points (nếu = 0, sử dụng ATR)
 input ulong                         MagicNumber             = 1010; // Số Magic (Magic Number)
 input ushort                        POExpirationMinutes     = 60; // Time hết hạn cho lệnh chờ (Pending Order Expiration Minutes)
+input double                        MaxDrawdownDaily        = -5; // Max Drawdown trong ngày (%)
 
 sinput group                        "RISK MANAGEMENT"
 sinput string                       strMM; 
@@ -80,12 +81,19 @@ input double                        ATRFactorPO             = 1.2; // Hệ số 
 #define BTN_CANCEL_SELL_NAME "Btn Cancel Sell"
 #define BTN_CLOSE_SELL_NAME "Btn Close Sell"
 
+// Biến toàn cục để theo dõi Equity cao nhất & thấp nhất trong ngày
+double maxEquityToday = 0.0;
+double minEquityToday = 0.0;
+datetime lastResetTime = 0; // Thời điểm reset khi qua ngày
+
 // Lấy kích thước biểu đồ
 int chart_width = (int)ChartGetInteger(0, CHART_WIDTH_IN_PIXELS);
 int chart_height = (int)ChartGetInteger(0, CHART_HEIGHT_IN_PIXELS);
 // Top menu buttons
 double btn_height = chart_height * 0.05;  // 5% chiều cao biểu đồ
 double btn_width = chart_width * 0.15;   // 25% chiều rộng biểu đồ
+
+
 
 int OnInit()
 {  
@@ -101,89 +109,86 @@ int OnInit()
     // x2, y2     : Tọa độ góc dưới/phải
     
     //BUTTON BUY
-    btnBuy.Create(0,BTN_BUY_NAME,0,60,100,260,150);
+    btnBuy.Create(0, BTN_BUY_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.10), int(chart_width * 0.15), int(chart_height * 0.15));
     btnBuy.Text("BUY");
     btnBuy.Color(clrWhite);
     btnBuy.ColorBackground(C'2, 119, 118');
     btnBuy.ColorBorder(C'4, 82, 81');
     btnBuy.FontSize(11);
 
-    btnBuyStop.Create(0,BTN_BUY_STOP_NAME,0,60,150,260,190);
+    btnBuyStop.Create(0, BTN_BUY_STOP_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.15), int(chart_width * 0.15), int(chart_height * 0.20));
     btnBuyStop.Text("BUY STOP");
     btnBuyStop.Color(clrWhite);
     btnBuyStop.ColorBackground(C'2, 119, 118');
     btnBuyStop.ColorBorder(C'4, 82, 81');
     btnBuyStop.FontSize(9);
 
-    btnBuyLimit.Create(0,BTN_BUY_LIMIT_NAME,0,60,190,260,230);
+    btnBuyLimit.Create(0, BTN_BUY_LIMIT_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.20), int(chart_width * 0.15), int(chart_height * 0.25));
     btnBuyLimit.Text("BUY LIMIT");
     btnBuyLimit.Color(clrWhite);
     btnBuyLimit.ColorBackground(C'2, 119, 118');
     btnBuyLimit.ColorBorder(C'4, 82, 81');
     btnBuyLimit.FontSize(9);
 
-    btnCancelBuy.Create(0,BTN_CANCEL_BUY_NAME,0,60,250,260,280);
+    btnCancelBuy.Create(0, BTN_CANCEL_BUY_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.25), int(chart_width * 0.15), int(chart_height * 0.30));
     btnCancelBuy.Text("CANCEL BUY ORDER");
     btnCancelBuy.Color(C'2, 119, 118');
     btnCancelBuy.ColorBackground(C'242, 220, 162');
     btnCancelBuy.ColorBorder(C'4, 82, 81');
     btnCancelBuy.FontSize(7);
-    ObjectSetString(0,BTN_CANCEL_BUY_NAME,OBJPROP_TOOLTIP,"Cancel Pending Order");
+    ObjectSetString(0, BTN_CANCEL_BUY_NAME, OBJPROP_TOOLTIP, "Cancel Pending Order");
 
-    btnCloseBuy.Create(0,BTN_CLOSE_BUY_NAME,0,60,280,260,310);
+    btnCloseBuy.Create(0, BTN_CLOSE_BUY_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.30), int(chart_width * 0.15), int(chart_height * 0.35));
     btnCloseBuy.Text("CLOSE BUY");
     btnCloseBuy.Color(C'2, 119, 118');
     btnCloseBuy.ColorBackground(clrWhite);
     btnCloseBuy.ColorBorder(C'4, 82, 81');
     btnCloseBuy.FontSize(9);
-    ObjectSetString(0,BTN_CLOSE_BUY_NAME,OBJPROP_TOOLTIP,"Close Buy First");
+    ObjectSetString(0, BTN_CLOSE_BUY_NAME, OBJPROP_TOOLTIP, "Close Buy First");
 
-     //BUTTON SELL
-    btnSell.Create(0,BTN_SELL_NAME,0,260,100,460,150);
+    //BUTTON SELL
+    btnSell.Create(0, BTN_SELL_NAME, 0, int(chart_width * 0.15), int(chart_height * 0.10), int(chart_width * 0.30), int(chart_height * 0.15));
     btnSell.Text("SELL");
     btnSell.Color(clrWhite);
     btnSell.ColorBackground(clrDarkRed);
     btnSell.ColorBorder(C'74, 4, 8');
     btnSell.FontSize(11);
 
-    btnSellStop.Create(0,BTN_SELL_STOP_NAME,0,260,150,460,190);
+    btnSellStop.Create(0, BTN_SELL_STOP_NAME, 0, int(chart_width * 0.15), int(chart_height * 0.15), int(chart_width * 0.30), int(chart_height * 0.20));
     btnSellStop.Text("SELL STOP");
     btnSellStop.Color(clrWhite);
     btnSellStop.ColorBackground(clrDarkRed);
     btnSellStop.ColorBorder(C'74, 4, 8');
     btnSellStop.FontSize(9);
 
-    btnSellLimit.Create(0,BTN_SELL_LIMIT_NAME,0,260,190,460,230);
+    btnSellLimit.Create(0, BTN_SELL_LIMIT_NAME, 0, int(chart_width * 0.15), int(chart_height * 0.20), int(chart_width * 0.30), int(chart_height * 0.25));
     btnSellLimit.Text("SELL LIMIT");
     btnSellLimit.Color(clrWhite);
     btnSellLimit.ColorBackground(clrDarkRed);
     btnSellLimit.ColorBorder(C'74, 4, 8');
     btnSellLimit.FontSize(9);
 
-    btnCancelSell.Create(0,BTN_CANCEL_SELL_NAME,0,260,250,460,280);
+    btnCancelSell.Create(0, BTN_CANCEL_SELL_NAME, 0, int(chart_width * 0.15), int(chart_height * 0.25), int(chart_width * 0.30), int(chart_height * 0.30));
     btnCancelSell.Text("CANCEL SELL ORDER");
     btnCancelSell.Color(clrDarkRed);
     btnCancelSell.ColorBackground(C'242, 220, 162');
     btnCancelSell.ColorBorder(C'74, 4, 8');
     btnCancelSell.FontSize(7);
-    ObjectSetString(0,BTN_CANCEL_SELL_NAME,OBJPROP_TOOLTIP,"Cancel Pending Order");
+    ObjectSetString(0, BTN_CANCEL_SELL_NAME, OBJPROP_TOOLTIP, "Cancel Pending Order");
 
-    btnCloseSell.Create(0,BTN_CLOSE_SELL_NAME,0,260,280,460,310);
+    btnCloseSell.Create(0, BTN_CLOSE_SELL_NAME, 0, int(chart_width * 0.15), int(chart_height * 0.30), int(chart_width * 0.30), int(chart_height * 0.35));
     btnCloseSell.Text("CLOSE SELL");
     btnCloseSell.Color(clrDarkRed);
     btnCloseSell.ColorBackground(clrWhite);
     btnCloseSell.ColorBorder(C'74, 4, 8');
     btnCloseSell.FontSize(9);
-    ObjectSetString(0,BTN_CLOSE_SELL_NAME,OBJPROP_TOOLTIP,"Close Sell First");
+    ObjectSetString(0, BTN_CLOSE_SELL_NAME, OBJPROP_TOOLTIP, "Close Sell First");
 
     ChartRedraw();
 
     int MAHandle = MA.Init(_Symbol,PERIOD_CURRENT,MAPeriod,MAShift,MAMethod,MAPrice);
     if(MAHandle == -1){
         return(INIT_FAILED);}
-
-    // Gán chỉ báo vào biểu đồ
-    //ChartIndicatorAdd(0, 0, MAHandle);
 
     int ATRHandle = ATR.Init(_Symbol,PERIOD_CURRENT,ATRPeriod);   
     if(ATRHandle == -1){
@@ -237,9 +242,23 @@ void OnTick()
     double askPrice = SymbolInfoDouble(_Symbol, SYMBOL_ASK);
     double bidPrice = SymbolInfoDouble(_Symbol, SYMBOL_BID);
 
+    // Cập nhật giá trị Drawdown
+    UpdateMaxDrawdown(); 
+    double currentMDD = GetCurrentDrawdown(); // Lấy giá trị Drawdown hiện tại
+    // Nếu Drawdown trong ngày vượt quá -5%, không cho mở lệnh
+    if (currentMDD <= MaxDrawdownDaily) 
+    {
+        string message = "Max Drawdown to " + DoubleToString(currentMDD, 2) + "%, Stop trading on EA!";
+        // SendTelegramMessage(message); // Gửi thông báo Telegram
+        Comment(message);
+        return; 
+    }
+    // Nếu chưa đạt Max Drawdown, tiếp tục giao dịch....
+
     //Stoploss trung bình giá cao nhất của 5 cây nến gần nhất
     double averageHigh = CalculateAverageHigh();
     double stopLossAverageHigh = averageHigh + (slPoints*_Point);
+
 
     //Stoploss trung bình giá thấp nhất của 5 cây nến gần nhất
     double averageLow = CalculateAverageLow();
@@ -248,19 +267,23 @@ void OnTick()
     //Lấy thông tin tài khoản
     Comment("EA Manual Trading; Magic Number: ", MagicNumber);
 
-    string strRiskPercent = "Risk Per Trade: " + DoubleToString(RiskPercent, 2) + "%";
-    string strAccountBalance = "Account Balance: " + DoubleToString(AccountInfoDouble(ACCOUNT_BALANCE), 2) + "$";
-    string strSpread = "Spread: " + IntegerToString(SymbolInfoInteger(_Symbol, SYMBOL_SPREAD), 2);
-    string strOpenBuy = "Open Buy: " + IntegerToString(CountOpenBuy());
-    string strOpenSell = "Open Sell: " + IntegerToString(CountOpenSell());
+
+    string strRiskPercent       = "Risk: " + DoubleToString(RiskPercent, 2) + "%";
+    string strAccountBalance    = "Account Balance: " + DoubleToString(AccountInfoDouble(ACCOUNT_BALANCE), 2) + "$";
+    string strBalanceAndRisk    = "Account Balance: " + DoubleToString(AccountInfoDouble(ACCOUNT_BALANCE), 2) + "$ | Risk: " + DoubleToString(RiskPercent, 2) + "%";
+    string strSpread            = "Spread: " + IntegerToString(SymbolInfoInteger(_Symbol, SYMBOL_SPREAD), 2);
+    string strMaxDrawdown       = "Max Drawdown: " + DoubleToString(currentMDD, 2) + "%";
+    string strOpenBuy           = "Open Buy: " + IntegerToString(CountOpenBuy());
+    string strOpenSell          = "Open Sell: " + IntegerToString(CountOpenSell());
     
     //Tạo các label hiển thị thông tin góc phải trên
-    createText("Text1", strRiskPercent, 40, 40, 8, clrWhite, "Arial");
-    createText("Text2", strAccountBalance, 40, 65, 8, clrWhite, "Arial");
+    createText("Text1", strBalanceAndRisk, 40, 40, 8, clrWhite, "Arial");
+    createText("Text2", strMaxDrawdown, 40, 65, 8, clrWhite, "Arial");
     createText("Text3", strSpread, 40, 90, 8, clrWhite, "Arial");
     createText("Text4", strOpenBuy, 40, 115, 8, clrWhite, "Arial");
     createText("Text5", strOpenSell, 40, 140, 8, clrWhite, "Arial");
 
+    
     //Set tooltip cho các button
     string strBuy = "Buy giá: " + DoubleToString(SymbolInfoDouble(_Symbol, SYMBOL_ASK),5);
     ObjectSetString(0,BTN_BUY_NAME,OBJPROP_TOOLTIP,strBuy);
@@ -500,3 +523,65 @@ int CountOpenSell()
     return count;
 }
 
+// Hàm cập nhật giá trị Max Drawdown
+void UpdateMaxDrawdown()
+{
+    double currentEquity = AccountInfoDouble(ACCOUNT_EQUITY);
+    datetime now = TimeCurrent();
+    MqlDateTime timeStruct;
+    TimeToStruct(now, timeStruct);
+
+    // Nếu là ngày mới, reset giá trị maxEquity và minEquity
+    if (lastResetTime == 0 || (timeStruct.hour == 0 && timeStruct.min == 0)) 
+    {
+        maxEquityToday = currentEquity;
+        minEquityToday = currentEquity;
+        lastResetTime = now;
+    }
+
+    // Cập nhật max và min equity trong ngày
+    if (currentEquity > maxEquityToday)
+        maxEquityToday = currentEquity;
+    if (currentEquity < minEquityToday)
+        minEquityToday = currentEquity;
+}
+
+// Hàm trả về giá trị Max Drawdown hiện tại (%)
+double GetCurrentDrawdown()
+{
+    if (maxEquityToday == 0) return 0.0; // Tránh chia cho 0
+
+    double drawdownPercent = ((minEquityToday - maxEquityToday) / maxEquityToday) * 100.0;
+    return drawdownPercent; // Trả về giá trị MDD hiện tại (%)
+}
+
+// Hàm gửi tin nhắn Telegram
+// void SendTelegramMessage(string message) 
+// {
+//     string botToken = "7826196467:AAGmlJcO4_EREt9NU30bWM4W1lQlDWoUOZM";   // 🔹 Thay bằng token từ BotFather
+//     string chatID   = "1349135415";     // 🔹 Thay bằng Chat ID của bạn
+
+//     string url = "https://api.telegram.org/bot" + botToken + "/sendMessage";
+//     string data = "chat_id=" + chatID + "&text=" + message;
+    
+//     char requestData[];
+//     StringToCharArray(data, requestData); // ✅ Chuyển `string` thành `char[]` đúng chuẩn
+    
+//     char result[];
+//     string result_headers;
+//     ResetLastError();
+    
+//     // 🛠 Headers cần thiết cho HTTP POST request
+//     string headers = "Content-Type: application/x-www-form-urlencoded\r\n";
+
+//     int res = WebRequest("POST", url, headers, 5000, requestData, result, result_headers);
+
+//     if(res == -1)
+//     {
+//         Print("❌ Telegram gửi lỗi: ", GetLastError());
+//     }
+//     else
+//     {
+//         Print("..Tin nhắn Telegram đã gửi thành công!");
+//     }
+// }
