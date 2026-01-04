@@ -40,11 +40,12 @@ CBar Bar;
 CiATR ATR;
 CiMA MA;
 
+
 //+----------------------------------------------------------+
 //| Input & Global Variables | Biến đầu vào và biến toàn cục |
 //+----------------------------------------------------------+
 sinput group                        "INPUT"
-input int                           slPoints                = 150; // Điểm dừng lỗ 5Bar+Points (nếu = 0, sử dụng ATR)
+input int                           slPoints                = 0; // Điểm dừng lỗ 5Bar+Points (nếu = 0, sử dụng ATR)
 input ulong                         MagicNumber             = 1010; // Số Magic (Magic Number)
 input ushort                        POExpirationMinutes     = 60; // Time hết hạn cho lệnh chờ (Pending Order Expiration Minutes)
 input double                        MaxDrawdownDaily        = 0; // Max Drawdown trong ngày (nếu = 0 tắt chức năng, -5 = 5%)
@@ -101,6 +102,37 @@ int OnInit()
 {  
     //SET VARIABLES
     Trade.SetMagicNumber(MagicNumber);
+
+    // Kiểm tra trading allowed
+    if(!TerminalInfoInteger(TERMINAL_TRADE_ALLOWED))
+    {
+        Alert("❌ Trading bị tắt trong Terminal!");
+        return(INIT_FAILED);
+    }
+    
+    if(!MQLInfoInteger(MQL_TRADE_ALLOWED))
+    {
+        Alert("❌ EA không được phép giao dịch! Bật AutoTrading!");
+        return(INIT_FAILED);
+    }
+    
+    // Kiểm tra symbol
+    if(!SymbolSelect(_Symbol, true))
+    {
+        Alert("❌ Không thể chọn symbol: ", _Symbol);
+        return(INIT_FAILED);
+    }
+
+    //     // Cấu hình Trade object
+    // trade.SetExpertMagicNumber(MagicNumber);
+    // trade.SetDeviationInPoints(50);
+    // trade.SetTypeFilling(ORDER_FILLING_IOC); // QUAN TRỌNG cho crypto
+    // trade.SetAsyncMode(false);
+    
+    // In thông tin symbol
+    Print("Min Volume: ", SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MIN),
+          " | Max Volume: ", SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_MAX),
+          " | Volume Step: ", SymbolInfoDouble(_Symbol, SYMBOL_VOLUME_STEP));
 
     createText("1", string(_Period), 20,20,clrLinen,13,"Arial");
 
@@ -305,14 +337,19 @@ void OnTick()
     ObjectSetString(0,BTN_SELL_STOP_NAME,OBJPROP_TOOLTIP,"Sell Stop");
     ObjectSetString(0,BTN_SELL_LIMIT_NAME,OBJPROP_TOOLTIP,"Sell Limit");
     
+
+    // double stopLossATR      = PM.CalculateStopLossByATR(_Symbol, "BUY", ATRValuePO, ATRFactorPO);
+
+
     if(btnBuy.Pressed())
     {
         if(slPoints > 0)
         {
-            double volume = RM.MoneyManagement(_Symbol,MoneyManagement,MinLotPerEquitySteps,RiskPercent,MathAbs(askPrice - stopLossAverageLow),FixedVolume,ORDER_TYPE_BUY);
+            double stopLoss = MathMax(stopLossAverageLow, askPrice - stopLossAverageLow);
+            double volume = RM.MoneyManagement(_Symbol,MoneyManagement,MinLotPerEquitySteps,RiskPercent,MathAbs(askPrice - stopLoss),FixedVolume,ORDER_TYPE_BUY);
             if(volume > 0)
             {
-                Trade.Buy(_Symbol, volume, stopLossAverageLow, 0);
+                trade.Buy(volume, _Symbol, askPrice, stopLoss, 0);
             }
         } else
         {
@@ -320,9 +357,10 @@ void OnTick()
             double volume = RM.MoneyManagement(_Symbol,MoneyManagement,MinLotPerEquitySteps,RiskPercent,MathAbs(askPrice - stopLossATR),FixedVolume,ORDER_TYPE_BUY);
             if(volume > 0)
             {
-                Trade.Buy(_Symbol,volume, stopLossATR, 0);
+                trade.Buy(volume, _Symbol, askPrice, stopLossATR, 0);
             }
         }
+        
         btnBuy.Pressed(false);
     }
 
@@ -330,10 +368,11 @@ void OnTick()
     {
         if(slPoints > 0)
         {
-            double volume = RM.MoneyManagement(_Symbol,MoneyManagement,MinLotPerEquitySteps,RiskPercent,MathAbs(bidPrice - stopLossAverageHigh),FixedVolume,ORDER_TYPE_SELL);
+            double stopLoss = MathMin(stopLossAverageHigh, bidPrice + stopLossAverageHigh);
+            double volume = RM.MoneyManagement(_Symbol,MoneyManagement,MinLotPerEquitySteps,RiskPercent,MathAbs(bidPrice - stopLoss),FixedVolume,ORDER_TYPE_SELL);
             if(volume > 0)
             {
-                Trade.Sell(_Symbol, volume, stopLossAverageHigh, 0);
+                trade.Sell(volume, _Symbol, bidPrice, stopLoss, 0);
             }
         } else
         {
@@ -341,7 +380,7 @@ void OnTick()
             double volume = RM.MoneyManagement(_Symbol,MoneyManagement,MinLotPerEquitySteps,RiskPercent,MathAbs(bidPrice - stopLossATR),FixedVolume,ORDER_TYPE_SELL);
             if(volume > 0)
             {
-                Trade.Sell(_Symbol, volume, stopLossATR, 0);
+                trade.Sell(volume, _Symbol, bidPrice, stopLossATR, 0);
             }
         }
         btnSell.Pressed(false);
