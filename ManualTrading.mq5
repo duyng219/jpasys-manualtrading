@@ -299,6 +299,7 @@ void OnTick()
     ObjectSetString(0,BTN_BUY_STOP_NAME,OBJPROP_TOOLTIP,"Buy Stop");
     ObjectSetString(0,BTN_BUY_LIMIT_NAME,OBJPROP_TOOLTIP,"Buy Limit");
 
+
     string strSell = "Sell giá: " + DoubleToString(SymbolInfoDouble(_Symbol, SYMBOL_BID),5);
     ObjectSetString(0,BTN_SELL_NAME,OBJPROP_TOOLTIP,strSell);
     ObjectSetString(0,BTN_SELL_STOP_NAME,OBJPROP_TOOLTIP,"Sell Stop");
