@@ -14,11 +14,11 @@
 #include <Controls/Button.mqh>
 #include <Controls/Label.mqh>
 
-#include <jpasys-includecore/Indicator/Indicators.mqh>
-#include <jpasys-includecore/Core/BarManager.mqh>
-#include <jpasys-includecore/Core/PositionManager.mqh>
-#include <jpasys-includecore/Core/RiskManager.mqh>
-#include <jpasys-includecore/Core/TradeExecutor.mqh>
+#include <IncludeCore/Indicator/Indicators.mqh>
+#include <IncludeCore/Core/BarManager.mqh>
+#include <IncludeCore/Core/PositionManager.mqh>
+#include <IncludeCore/Core/RiskManager.mqh>
+#include <IncludeCore/Core/TradeExecutor.mqh>
 
 CTrade trade;
 CButton btnBuy;
@@ -46,8 +46,8 @@ CiMA MA;
 //+----------------------------------------------------------+
 sinput group                        "INPUT"
 input int                           slPoints                = 0; // Điểm dừng lỗ 5Bar+Points (nếu = 0, sử dụng ATR)
-input ulong                         MagicNumber             = 1010; // Số Magic (Magic Number)
-input ushort                        POExpirationMinutes     = 60; // Time hết hạn cho lệnh chờ (Pending Order Expiration Minutes)
+input ulong                         MagicNumber             = 0001; // Số Magic (Magic Number)
+input ushort                        POExpirationMinutes     = 360; // Time hết hạn cho lệnh chờ (Pending Order Expiration Minutes)
 input double                        MaxDrawdownDaily        = 0; // Max Drawdown trong ngày (nếu = 0 tắt chức năng, -5 = 5%)
 
 sinput group                        "RISK MANAGEMENT"
@@ -55,7 +55,7 @@ sinput string                       strMM;
 input ENUM_MONEY_MANAGEMENT         MoneyManagement         = MM_EQUITY_RISK_PERCENT; // Quản lý rủi ro (Options)
 input double                        MinLotPerEquitySteps    = 500; // Bước lô tối thiểu theo vốn (Min Lot Per Equity Steps)
 input double                        FixedVolume             = 0.01; // Khối lượng cố định (Fixed Volume)
-input double                        RiskPercent             = 1; // Phần trăm rủi ro (1 = 1% Balance)
+input double                        RiskPercent             = 0.2; // Phần trăm rủi ro (1 = 1% Balance)
 
 sinput group                        "MOVING AVERAGE SETTINGS"
 input int                           MAPeriod                = 21; // Chu kỳ MA (Period)
@@ -65,8 +65,8 @@ input ENUM_APPLIED_PRICE            MAPrice                 = PRICE_CLOSE; // Gi
 
 sinput group                        "ATR SETTINGS"
 input int                           ATRPeriod               = 14; // Chu kỳ ATR (Period)
-input double                        ATRFactor               = 1.5; // Hệ số ATR (Factor)
-input double                        ATRFactorPO             = 1.2; // Hệ số ATR cho lệnh chờ (Factor Pending Order)
+input double                        ATRFactor               = 1; // Hệ số ATR (Factor)
+input double                        ATRFactorPO             = 1; // Hệ số ATR cho lệnh chờ (Factor Pending Order)
 
 #define BTN_BUY_NAME "Btn Buy"
 #define BTN_BUY_STOP_NAME "Btn Buy Stop"
@@ -97,6 +97,96 @@ double      btn_height      = chart_height * 0.05;  // 5% chiều cao biểu đ�
 double      btn_width       = chart_width * 0.15;   // 25% chiều rộng biểu đồ
 
 
+
+// Hàm tạo tất cả các button
+void CreateAllButtons()
+{
+    // chart_id   : ID của chart (0 là chart hiện tại)
+    // name       : Tên của đối tượng (BTN_BUY_NAME là hằng ký hiệu nút)
+    // sub_window : Chỉ định subwindow (0 là subwindow chính)
+    // x1, y1     : Tọa độ góc trên/trái
+    // x2, y2     : Tọa độ góc dưới/phải
+    
+    //BUTTON BUY
+    btnBuy.Create(0, BTN_BUY_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.10), int(chart_width * 0.13), int(chart_height * 0.15));
+    btnBuy.Text("Buy");
+    btnBuy.Color(clrWhite);
+    btnBuy.ColorBackground(C'2,119,117');
+    btnBuy.ColorBorder(C'4, 82, 81');
+    btnBuy.FontSize(11);
+
+
+    btnBuyStop.Create(0, BTN_BUY_STOP_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.15), int(chart_width * 0.13), int(chart_height * 0.20));
+    btnBuyStop.Text("Buy Stop");
+    btnBuyStop.Color(clrWhite);
+    btnBuyStop.ColorBackground(C'2, 119, 118');
+    btnBuyStop.ColorBorder(C'4, 82, 81');
+    btnBuyStop.FontSize(9);
+
+    btnBuyLimit.Create(0, BTN_BUY_LIMIT_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.20), int(chart_width * 0.13), int(chart_height * 0.25));
+    btnBuyLimit.Text("Buy Limit");
+    btnBuyLimit.Color(clrWhite);
+    btnBuyLimit.ColorBackground(C'2, 119, 118');
+    btnBuyLimit.ColorBorder(C'4, 82, 81');
+    btnBuyLimit.FontSize(9);
+
+    btnCancelBuy.Create(0, BTN_CANCEL_BUY_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.27), int(chart_width * 0.13), int(chart_height * 0.30));
+    btnCancelBuy.Text("Cancel Buy Order");
+    btnCancelBuy.Color(C'2, 119, 118');
+    btnCancelBuy.ColorBackground(C'242, 220, 162');
+    btnCancelBuy.ColorBorder(C'4, 82, 81');
+    btnCancelBuy.FontSize(7);
+    ObjectSetString(0, BTN_CANCEL_BUY_NAME, OBJPROP_TOOLTIP, "Cancel Pending Order");
+
+    btnCloseBuy.Create(0, BTN_CLOSE_BUY_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.30), int(chart_width * 0.13), int(chart_height * 0.34));
+    btnCloseBuy.Text("Close Buy");
+    btnCloseBuy.Color(C'2, 119, 118');
+    btnCloseBuy.ColorBackground(clrWhite);
+    btnCloseBuy.ColorBorder(C'4, 82, 81');
+    btnCloseBuy.FontSize(9);
+    ObjectSetString(0, BTN_CLOSE_BUY_NAME, OBJPROP_TOOLTIP, "Close Buy First");
+
+    //BUTTON SELL
+    btnSell.Create(0, BTN_SELL_NAME, 0, int(chart_width * 0.13), int(chart_height * 0.10), int(chart_width * 0.25), int(chart_height * 0.15));
+    btnSell.Text("Sell");
+    btnSell.Color(clrWhite);
+    btnSell.ColorBackground(clrDarkRed);
+    btnSell.ColorBorder(C'41,39,38');
+    btnSell.FontSize(11);
+
+
+    btnSellStop.Create(0, BTN_SELL_STOP_NAME, 0, int(chart_width * 0.13), int(chart_height * 0.15), int(chart_width * 0.25), int(chart_height * 0.20));
+    btnSellStop.Text("Sell Stop");
+    btnSellStop.Color(clrWhite);
+    btnSellStop.ColorBackground(clrDarkRed);
+    btnSellStop.ColorBorder(C'41,39,38');
+    btnSellStop.FontSize(9);
+
+    btnSellLimit.Create(0, BTN_SELL_LIMIT_NAME, 0, int(chart_width * 0.13), int(chart_height * 0.20), int(chart_width * 0.25), int(chart_height * 0.25));
+    btnSellLimit.Text("Sell Limit");
+    btnSellLimit.Color(clrWhite);
+    btnSellLimit.ColorBackground(clrDarkRed);
+    btnSellLimit.ColorBorder(C'41,39,38');
+    btnSellLimit.FontSize(9);
+
+    btnCancelSell.Create(0, BTN_CANCEL_SELL_NAME, 0, int(chart_width * 0.13), int(chart_height * 0.27), int(chart_width * 0.25), int(chart_height * 0.30));
+    btnCancelSell.Text("Cancel Sell Order");
+    btnCancelSell.Color(clrDarkRed);
+    btnCancelSell.ColorBackground(C'242, 220, 162');
+    btnCancelSell.ColorBorder(C'41,39,38');
+    btnCancelSell.FontSize(7);
+    ObjectSetString(0, BTN_CANCEL_SELL_NAME, OBJPROP_TOOLTIP, "Cancel Pending Order");
+
+    btnCloseSell.Create(0, BTN_CLOSE_SELL_NAME, 0, int(chart_width * 0.13), int(chart_height * 0.30), int(chart_width * 0.25), int(chart_height * 0.34));
+    btnCloseSell.Text("Close Sell");
+    btnCloseSell.Color(clrDarkRed);
+    btnCloseSell.ColorBackground(clrWhite);
+    btnCloseSell.ColorBorder(C'41,39,38');
+    btnCloseSell.FontSize(9);
+    ObjectSetString(0, BTN_CLOSE_SELL_NAME, OBJPROP_TOOLTIP, "Close Sell First");
+
+    ChartRedraw();
+}
 
 int OnInit()
 {  
@@ -136,97 +226,22 @@ int OnInit()
 
     createText("1", string(_Period), 20,20,clrLinen,13,"Arial");
 
-    // chart_id   : ID của chart (0 là chart hiện tại)
-    // name       : Tên của đối tượng (BTN_BUY_NAME là hằng ký hiệu nút)
-    // sub_window : Chỉ định subwindow (0 là subwindow chính)
-    // x1, y1     : Tọa độ góc trên/trái
-    // x2, y2     : Tọa độ góc dưới/phải
-    
-    //BUTTON BUY
-    btnBuy.Create(0, BTN_BUY_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.10), int(chart_width * 0.13), int(chart_height * 0.15));
-    btnBuy.Text("BUY");
-    btnBuy.Color(clrWhite);
-    btnBuy.ColorBackground(C'2, 119, 118');
-    btnBuy.ColorBorder(C'4, 82, 81');
-    btnBuy.FontSize(11);
+    // Tạo tất cả các button
+    CreateAllButtons();
 
-    btnBuyStop.Create(0, BTN_BUY_STOP_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.15), int(chart_width * 0.13), int(chart_height * 0.20));
-    btnBuyStop.Text("BUY STOP");
-    btnBuyStop.Color(clrWhite);
-    btnBuyStop.ColorBackground(C'2, 119, 118');
-    btnBuyStop.ColorBorder(C'4, 82, 81');
-    btnBuyStop.FontSize(9);
+    // Delay để đảm bảo symbol được load xong
+    Sleep(100);
 
-    btnBuyLimit.Create(0, BTN_BUY_LIMIT_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.20), int(chart_width * 0.13), int(chart_height * 0.25));
-    btnBuyLimit.Text("BUY LIMIT");
-    btnBuyLimit.Color(clrWhite);
-    btnBuyLimit.ColorBackground(C'2, 119, 118');
-    btnBuyLimit.ColorBorder(C'4, 82, 81');
-    btnBuyLimit.FontSize(9);
-
-    btnCancelBuy.Create(0, BTN_CANCEL_BUY_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.27), int(chart_width * 0.13), int(chart_height * 0.30));
-    btnCancelBuy.Text("CANCEL BUY ORDER");
-    btnCancelBuy.Color(C'2, 119, 118');
-    btnCancelBuy.ColorBackground(C'242, 220, 162');
-    btnCancelBuy.ColorBorder(C'4, 82, 81');
-    btnCancelBuy.FontSize(7);
-    ObjectSetString(0, BTN_CANCEL_BUY_NAME, OBJPROP_TOOLTIP, "Cancel Pending Order");
-
-    btnCloseBuy.Create(0, BTN_CLOSE_BUY_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.30), int(chart_width * 0.13), int(chart_height * 0.34));
-    btnCloseBuy.Text("CLOSE BUY");
-    btnCloseBuy.Color(C'2, 119, 118');
-    btnCloseBuy.ColorBackground(clrWhite);
-    btnCloseBuy.ColorBorder(C'4, 82, 81');
-    btnCloseBuy.FontSize(9);
-    ObjectSetString(0, BTN_CLOSE_BUY_NAME, OBJPROP_TOOLTIP, "Close Buy First");
-
-    //BUTTON SELL
-    btnSell.Create(0, BTN_SELL_NAME, 0, int(chart_width * 0.13), int(chart_height * 0.10), int(chart_width * 0.25), int(chart_height * 0.15));
-    btnSell.Text("SELL");
-    btnSell.Color(clrWhite);
-    btnSell.ColorBackground(clrDarkRed);
-    btnSell.ColorBorder(C'41,39,38');
-    btnSell.FontSize(11);
-
-    btnSellStop.Create(0, BTN_SELL_STOP_NAME, 0, int(chart_width * 0.13), int(chart_height * 0.15), int(chart_width * 0.25), int(chart_height * 0.20));
-    btnSellStop.Text("SELL STOP");
-    btnSellStop.Color(clrWhite);
-    btnSellStop.ColorBackground(clrDarkRed);
-    btnSellStop.ColorBorder(C'41,39,38');
-    btnSellStop.FontSize(9);
-
-    btnSellLimit.Create(0, BTN_SELL_LIMIT_NAME, 0, int(chart_width * 0.13), int(chart_height * 0.20), int(chart_width * 0.25), int(chart_height * 0.25));
-    btnSellLimit.Text("SELL LIMIT");
-    btnSellLimit.Color(clrWhite);
-    btnSellLimit.ColorBackground(clrDarkRed);
-    btnSellLimit.ColorBorder(C'41,39,38');
-    btnSellLimit.FontSize(9);
-
-    btnCancelSell.Create(0, BTN_CANCEL_SELL_NAME, 0, int(chart_width * 0.13), int(chart_height * 0.27), int(chart_width * 0.25), int(chart_height * 0.30));
-    btnCancelSell.Text("CANCEL SELL ORDER");
-    btnCancelSell.Color(clrDarkRed);
-    btnCancelSell.ColorBackground(C'242, 220, 162');
-    btnCancelSell.ColorBorder(C'41,39,38');
-    btnCancelSell.FontSize(7);
-    ObjectSetString(0, BTN_CANCEL_SELL_NAME, OBJPROP_TOOLTIP, "Cancel Pending Order");
-
-    btnCloseSell.Create(0, BTN_CLOSE_SELL_NAME, 0, int(chart_width * 0.13), int(chart_height * 0.30), int(chart_width * 0.25), int(chart_height * 0.34));
-    btnCloseSell.Text("CLOSE SELL");
-    btnCloseSell.Color(clrDarkRed);
-    btnCloseSell.ColorBackground(clrWhite);
-    btnCloseSell.ColorBorder(C'41,39,38');
-    btnCloseSell.FontSize(9);
-    ObjectSetString(0, BTN_CLOSE_SELL_NAME, OBJPROP_TOOLTIP, "Close Sell First");
-
-    ChartRedraw();
-
-    int MAHandle = MA.Init(_Symbol,PERIOD_CURRENT,MAPeriod,MAShift,MAMethod,MAPrice);
+    int MAHandle = MA.Init(_Symbol,_Period,MAPeriod,MAShift,MAMethod,MAPrice);
     if(MAHandle == -1){
+        Alert("MA indicator failed");
         return(INIT_FAILED);}
 
-    int ATRHandle = ATR.Init(_Symbol,PERIOD_CURRENT,ATRPeriod);   
+    int ATRHandle = ATR.Init(_Symbol,_Period,ATRPeriod);   
     if(ATRHandle == -1){
+        Alert("ATR indicator failed");
         return(INIT_FAILED);}
+    
 
     return(INIT_SUCCEEDED);
 }
@@ -256,8 +271,21 @@ void OnDeinit(const int reason)
     Comment("");
 }
 
+
 void OnTick()
 { 
+    // ✅ Kiểm tra và tạo lại buttons nếu bị mất (đặt ở đầu OnTick)
+    static int tickCount = 0;
+    tickCount++;
+    if(tickCount % 100 == 0) // Kiểm tra mỗi 100 tick
+    {
+        if(ObjectFind(0, BTN_BUY_NAME) < 0)
+        {
+            Print("Buttons bị mất. Tạo lại...");
+            CreateAllButtons();
+        }
+    }
+    
     //Init Indicators
     //Moving Average
     MA.RefreshMain();
@@ -492,6 +520,48 @@ void OnTick()
     PM.TrailingStopLossByATR(_Symbol,MagicNumber ,ATRValue, ATRFactor);
 }
 
+void OnChartEvent(const int id, const long &lparam, const double &dparam, const string &sparam)
+{
+    // Xử lý sự kiện click button
+    btnBuy.OnEvent(id, lparam, dparam, sparam);
+    btnBuyStop.OnEvent(id, lparam, dparam, sparam);
+    btnBuyLimit.OnEvent(id, lparam, dparam, sparam);
+    btnCancelBuy.OnEvent(id, lparam, dparam, sparam);
+    btnCloseBuy.OnEvent(id, lparam, dparam, sparam);
+    
+    btnSell.OnEvent(id, lparam, dparam, sparam);
+    btnSellStop.OnEvent(id, lparam, dparam, sparam);
+    btnSellLimit.OnEvent(id, lparam, dparam, sparam);
+    btnCancelSell.OnEvent(id, lparam, dparam, sparam);
+    btnCloseSell.OnEvent(id, lparam, dparam, sparam);
+
+    // ✅ THÊM: Xử lý khi chart thay đổi (template change)
+    if(id == CHARTEVENT_CHART_CHANGE)
+    {
+        // Kiểm tra xem button có tồn tại không
+        if(ObjectFind(0, BTN_BUY_NAME) < 0)
+        {
+            Print("Template đã thay đổi. Tạo lại buttons...");
+            CreateAllButtons();
+        }
+    }
+
+    // Xử lý sự kiện xóa đối tượng (khi template thay đổi, buttons có thể bị xóa)
+    if(id == CHARTEVENT_OBJECT_DELETE)
+    {
+        // Kiểm tra xem button nào bị xóa và tạo lại nó
+        if(sparam == BTN_BUY_NAME || sparam == BTN_BUY_STOP_NAME || 
+           sparam == BTN_BUY_LIMIT_NAME || sparam == BTN_CANCEL_BUY_NAME || 
+           sparam == BTN_CLOSE_BUY_NAME || sparam == BTN_SELL_NAME || 
+           sparam == BTN_SELL_STOP_NAME || sparam == BTN_SELL_LIMIT_NAME || 
+           sparam == BTN_CANCEL_SELL_NAME || sparam == BTN_CLOSE_SELL_NAME)
+        {
+            Print("Button bị xóa: ", sparam, ". Tạo lại tất cả các buttons...");
+            CreateAllButtons();
+        }
+    }
+}
+
 bool createText(string pObjName, string pText, int pX, int pY, int pFontsize, color pClrText, string pFont)
 {
    ResetLastError();
@@ -522,11 +592,11 @@ double CalculateAverageHigh()
     double high1 = Bar.High(1);
     double high2 = Bar.High(2);
     double high3 = Bar.High(3);
-    double high4 = Bar.High(4);
-    double high5 = Bar.High(5);
+    // double high4 = Bar.High(4);
+    // double high5 = Bar.High(5);
     // Print("High 1: ", high1, " | High 2: ", high2, " | High 3: ", high3, " | High 4: ", high4, " | High 5: ", high5);
     // Tính trung bình giá cao nhất
-    double averageHigh = (high1 + high2 + high3 + high4 + high5) / 5.0;
+    double averageHigh = (high1 + high2 + high3) / 3.0;
 
     return averageHigh;
 }
@@ -537,11 +607,11 @@ double CalculateAverageLow()
     double low1 = Bar.Low(1);
     double low2 = Bar.Low(2);
     double low3 = Bar.Low(3);
-    double low4 = Bar.Low(4);
-    double low5 = Bar.Low(5);
+    // double low4 = Bar.Low(4);
+    // double low5 = Bar.Low(5);
     // Print("Low 1: ", low1, " | Low 2: ", low2, " | Low 3: ", low3, " | Low 4: ", low4, " | Low 5: ", low5);
     // Tính trung bình giá cao nhất
-    double averageLow = (low1 + low2 + low3 + low4 + low5) / 5.0;
+    double averageLow = (low1 + low2 + low3) / 3.0;
 
     return averageLow;
 }
