@@ -44,29 +44,29 @@ CiMA MA;
 //+----------------------------------------------------------+
 //| Input & Global Variables | Biến đầu vào và biến toàn cục |
 //+----------------------------------------------------------+
-sinput group                        "INPUT"
-input int                           slPoints                = 0; // Điểm dừng lỗ 5Bar+Points (nếu = 0, sử dụng ATR)
-input ulong                         MagicNumber             = 0001; // Số Magic (Magic Number)
-input ushort                        POExpirationMinutes     = 360; // Time hết hạn cho lệnh chờ (Pending Order Expiration Minutes)
-input double                        MaxDrawdownDaily        = 0; // Max Drawdown trong ngày (nếu = 0 tắt chức năng, -5 = 5%)
+sinput group                                   "INPUT"
+input int                                          slPoints                           = 0; // Điểm dừng lỗ 5Bar+Points (nếu = 0, sử dụng ATR)
+input ulong                                     MagicNumber                = 0001; // Số Magic (Magic Number)
+input ushort                                    POExpirationMinutes     = 360; // Time hết hạn cho lệnh chờ (Pending Order Expiration Minutes)
+input double                                   MaxDrawdownDaily       = 0; // Max Drawdown trong ngày (nếu = 0 tắt chức năng, -5 = 5%)
 
-sinput group                        "RISK MANAGEMENT"
-sinput string                       strMM; 
+sinput group                                "RISK MANAGEMENT"
+sinput string                                strMM; 
 input ENUM_MONEY_MANAGEMENT         MoneyManagement         = MM_EQUITY_RISK_PERCENT; // Quản lý rủi ro (Options)
-input double                        MinLotPerEquitySteps    = 500; // Bước lô tối thiểu theo vốn (Min Lot Per Equity Steps)
-input double                        FixedVolume             = 0.01; // Khối lượng cố định (Fixed Volume)
-input double                        RiskPercent             = 0.2; // Phần trăm rủi ro (1 = 1% Balance)
+input double                                MinLotPerEquitySteps    = 500; // Bước lô tối thiểu theo vốn (Min Lot Per Equity Steps)
+input double                                FixedVolume             = 0.01; // Khối lượng cố định (Fixed Volume)
+input double                                RiskPercent             = 0.2; // Phần trăm rủi ro (1 = 1% Balance)
 
-sinput group                        "MOVING AVERAGE SETTINGS"
-input int                           MAPeriod                = 21; // Chu kỳ MA (Period)
-input ENUM_MA_METHOD                MAMethod                = MODE_EMA; // Phương pháp MA (Method)
-input int                           MAShift                 = 0; // Dịch chuyển MA (Shift)
-input ENUM_APPLIED_PRICE            MAPrice                 = PRICE_CLOSE; // Giá áp dụng MA (Price)
+sinput group                                "MOVING AVERAGE SETTINGS"
+input int                                       MAPeriod                = 21; // Chu kỳ MA (Period)
+input ENUM_MA_METHOD         MAMethod                = MODE_EMA; // Phương pháp MA (Method)
+input int                                       MAShift                 = 0; // Dịch chuyển MA (Shift)
+input ENUM_APPLIED_PRICE       MAPrice                 = PRICE_CLOSE; // Giá áp dụng MA (Price)
 
-sinput group                        "ATR SETTINGS"
-input int                           ATRPeriod               = 14; // Chu kỳ ATR (Period)
-input double                        ATRFactor               = 1; // Hệ số ATR (Factor)
-input double                        ATRFactorPO             = 1; // Hệ số ATR cho lệnh chờ (Factor Pending Order)
+sinput group                                "ATR SETTINGS"
+input int                                       ATRPeriod               = 14; // Chu kỳ ATR (Period)
+input double                                ATRFactor               = 1; // Hệ số ATR (Factor)
+input double                                ATRFactorPO             = 1; // Hệ số ATR cho lệnh chờ (Factor Pending Order)
 
 #define BTN_BUY_NAME "Btn Buy"
 #define BTN_BUY_STOP_NAME "Btn Buy Stop"
@@ -92,15 +92,38 @@ int         lastResetMonth = 0;
 // Lấy kích thước biểu đồ
 int         chart_width     = (int)ChartGetInteger(0, CHART_WIDTH_IN_PIXELS);
 int         chart_height    = (int)ChartGetInteger(0, CHART_HEIGHT_IN_PIXELS);
-// Top menu buttons
-double      btn_height      = chart_height * 0.05;  // 5% chiều cao biểu đồ
-double      btn_width       = chart_width * 0.15;   // 25% chiều rộng biểu đồ
 
+// Các hằng số cho vị trí và kích thước nút (tính theo phần trăm biểu đồ)
+double                        BtnHeightPercent        = 0.035; // Chiều cao nút (% chiều cao biểu đồ)
+double                        BtnWidthBuyPercent      = 0.08; // Chiều rộng nút Buy (% chiều rộng biểu đồ)
+double                        BtnWidthSellPercent     = 0.08; // Chiều rộng nút Sell (% chiều rộng biểu đồ)
+double                        BtnBuyStartPercent      = 0.03; // Vị trí X nút Buy (% chiều rộng biểu đồ)
+double                        BtnSellStartPercent     = 0.10; // Vị trí X nút Sell (% chiều rộng biểu đồ)
+double                        BtnStartYPercent        = 0.10; // Vị trí Y nút (% chiều cao biểu đồ)
 
+// Màu nút BUY
+color       BtnBuyTextColor         = clrWhite;
+color       BtnBuyBackColor         = C'33,72,72'; // Màu nền nút Buy
+color       BtnBuyBorderColor       = clrBlack; // Màu viền nút Buy
+color       BtnBuyCancelBackColor   = C'242, 220, 162'; // Màu nền nút Cancel Buy
+
+// Màu nút SELL
+color       BtnSellTextColor        = clrWhite; // Màu chữ nút SellZ
+color       BtnSellBackColor        = C'112,43,43'; // Màu nền nút Sell
+color       BtnSellBorderColor      = clrBlack; // Màu viền nút Sell
+color       BtnSellCancelBackColor  = C'242, 220, 162'; // Màu nền nút Cancel Sell
 
 // Hàm tạo tất cả các button
 void CreateAllButtons()
 {
+    // Tính toán kích thước và vị trí từ input
+    double btn_height_px = chart_height * BtnHeightPercent;
+    double btn_width_buy_px = chart_width * BtnWidthBuyPercent;
+    double btn_width_sell_px = chart_width * BtnWidthSellPercent;
+    double btn_buy_x_start = chart_width * BtnBuyStartPercent;
+    double btn_sell_x_start = chart_width * BtnSellStartPercent;
+    double btn_y_start = chart_height * BtnStartYPercent;
+    
     // chart_id   : ID của chart (0 là chart hiện tại)
     // name       : Tên của đối tượng (BTN_BUY_NAME là hằng ký hiệu nút)
     // sub_window : Chỉ định subwindow (0 là subwindow chính)
@@ -108,80 +131,86 @@ void CreateAllButtons()
     // x2, y2     : Tọa độ góc dưới/phải
     
     //BUTTON BUY
-    btnBuy.Create(0, BTN_BUY_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.10), int(chart_width * 0.13), int(chart_height * 0.15));
+    btnBuy.Create(0, BTN_BUY_NAME, 0, int(btn_buy_x_start), int(btn_y_start), int(btn_buy_x_start + btn_width_buy_px), int(btn_y_start + btn_height_px));
     btnBuy.Text("Buy");
-    btnBuy.Color(clrWhite);
-    btnBuy.ColorBackground(C'2,119,117');
-    btnBuy.ColorBorder(C'4, 82, 81');
+    btnBuy.Color(BtnBuyTextColor);
+    btnBuy.ColorBackground(BtnBuyBackColor);
+    btnBuy.ColorBorder(BtnBuyBorderColor);
     btnBuy.FontSize(11);
 
-
-    btnBuyStop.Create(0, BTN_BUY_STOP_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.15), int(chart_width * 0.13), int(chart_height * 0.20));
+    double btn_y_offset = btn_height_px;
+    btnBuyStop.Create(0, BTN_BUY_STOP_NAME, 0, int(btn_buy_x_start), int(btn_y_start + btn_y_offset), int(btn_buy_x_start + btn_width_buy_px), int(btn_y_start + btn_y_offset + btn_height_px));
     btnBuyStop.Text("Buy Stop");
-    btnBuyStop.Color(clrWhite);
-    btnBuyStop.ColorBackground(C'2, 119, 118');
-    btnBuyStop.ColorBorder(C'4, 82, 81');
+    btnBuyStop.Color(BtnBuyTextColor);
+    btnBuyStop.ColorBackground(BtnBuyBackColor);
+    btnBuyStop.ColorBorder(BtnBuyBorderColor);
     btnBuyStop.FontSize(9);
 
-    btnBuyLimit.Create(0, BTN_BUY_LIMIT_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.20), int(chart_width * 0.13), int(chart_height * 0.25));
+    btn_y_offset *= 2;
+    btnBuyLimit.Create(0, BTN_BUY_LIMIT_NAME, 0, int(btn_buy_x_start), int(btn_y_start + btn_y_offset), int(btn_buy_x_start + btn_width_buy_px), int(btn_y_start + btn_y_offset + btn_height_px));
     btnBuyLimit.Text("Buy Limit");
-    btnBuyLimit.Color(clrWhite);
-    btnBuyLimit.ColorBackground(C'2, 119, 118');
-    btnBuyLimit.ColorBorder(C'4, 82, 81');
+    btnBuyLimit.Color(BtnBuyTextColor);
+    btnBuyLimit.ColorBackground(BtnBuyBackColor);
+    btnBuyLimit.ColorBorder(BtnBuyBorderColor);
     btnBuyLimit.FontSize(9);
 
-    btnCancelBuy.Create(0, BTN_CANCEL_BUY_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.27), int(chart_width * 0.13), int(chart_height * 0.30));
+    btn_y_offset = btn_height_px * 2.85;
+    btnCancelBuy.Create(0, BTN_CANCEL_BUY_NAME, 0, int(btn_buy_x_start), int(btn_y_start + btn_y_offset), int(btn_buy_x_start + btn_width_buy_px), int(btn_y_start + btn_y_offset + btn_height_px));
     btnCancelBuy.Text("Cancel Buy Order");
-    btnCancelBuy.Color(C'2, 119, 118');
-    btnCancelBuy.ColorBackground(C'242, 220, 162');
-    btnCancelBuy.ColorBorder(C'4, 82, 81');
+    btnCancelBuy.Color(BtnBuyBorderColor);
+    btnCancelBuy.ColorBackground(BtnBuyCancelBackColor);
+    btnCancelBuy.ColorBorder(BtnBuyBorderColor);
     btnCancelBuy.FontSize(7);
     ObjectSetString(0, BTN_CANCEL_BUY_NAME, OBJPROP_TOOLTIP, "Cancel Pending Order");
 
-    btnCloseBuy.Create(0, BTN_CLOSE_BUY_NAME, 0, int(chart_width * 0.02), int(chart_height * 0.30), int(chart_width * 0.13), int(chart_height * 0.34));
+    btn_y_offset = btn_height_px * 3.75;
+    btnCloseBuy.Create(0, BTN_CLOSE_BUY_NAME, 0, int(btn_buy_x_start), int(btn_y_start + btn_y_offset), int(btn_buy_x_start + btn_width_buy_px), int(btn_y_start + btn_y_offset + btn_height_px));
     btnCloseBuy.Text("Close Buy");
-    btnCloseBuy.Color(C'2, 119, 118');
+    btnCloseBuy.Color(BtnBuyBorderColor);
     btnCloseBuy.ColorBackground(clrWhite);
-    btnCloseBuy.ColorBorder(C'4, 82, 81');
+    btnCloseBuy.ColorBorder(BtnBuyBorderColor);
     btnCloseBuy.FontSize(9);
     ObjectSetString(0, BTN_CLOSE_BUY_NAME, OBJPROP_TOOLTIP, "Close Buy First");
 
     //BUTTON SELL
-    btnSell.Create(0, BTN_SELL_NAME, 0, int(chart_width * 0.13), int(chart_height * 0.10), int(chart_width * 0.25), int(chart_height * 0.15));
+    btnSell.Create(0, BTN_SELL_NAME, 0, int(btn_sell_x_start), int(btn_y_start), int(btn_sell_x_start + btn_width_sell_px), int(btn_y_start + btn_height_px));
     btnSell.Text("Sell");
-    btnSell.Color(clrWhite);
-    btnSell.ColorBackground(clrDarkRed);
-    btnSell.ColorBorder(C'41,39,38');
+    btnSell.Color(BtnSellTextColor);
+    btnSell.ColorBackground(BtnSellBackColor);
+    btnSell.ColorBorder(BtnSellBorderColor);
     btnSell.FontSize(11);
 
-
-    btnSellStop.Create(0, BTN_SELL_STOP_NAME, 0, int(chart_width * 0.13), int(chart_height * 0.15), int(chart_width * 0.25), int(chart_height * 0.20));
+    btn_y_offset = btn_height_px;
+    btnSellStop.Create(0, BTN_SELL_STOP_NAME, 0, int(btn_sell_x_start), int(btn_y_start + btn_y_offset), int(btn_sell_x_start + btn_width_sell_px), int(btn_y_start + btn_y_offset + btn_height_px));
     btnSellStop.Text("Sell Stop");
-    btnSellStop.Color(clrWhite);
-    btnSellStop.ColorBackground(clrDarkRed);
-    btnSellStop.ColorBorder(C'41,39,38');
+    btnSellStop.Color(BtnSellTextColor);
+    btnSellStop.ColorBackground(BtnSellBackColor);
+    btnSellStop.ColorBorder(BtnSellBorderColor);
     btnSellStop.FontSize(9);
 
-    btnSellLimit.Create(0, BTN_SELL_LIMIT_NAME, 0, int(chart_width * 0.13), int(chart_height * 0.20), int(chart_width * 0.25), int(chart_height * 0.25));
+    btn_y_offset *= 2;
+    btnSellLimit.Create(0, BTN_SELL_LIMIT_NAME, 0, int(btn_sell_x_start), int(btn_y_start + btn_y_offset), int(btn_sell_x_start + btn_width_sell_px), int(btn_y_start + btn_y_offset + btn_height_px));
     btnSellLimit.Text("Sell Limit");
-    btnSellLimit.Color(clrWhite);
-    btnSellLimit.ColorBackground(clrDarkRed);
-    btnSellLimit.ColorBorder(C'41,39,38');
+    btnSellLimit.Color(BtnSellTextColor);
+    btnSellLimit.ColorBackground(BtnSellBackColor);
+    btnSellLimit.ColorBorder(BtnSellBorderColor);
     btnSellLimit.FontSize(9);
 
-    btnCancelSell.Create(0, BTN_CANCEL_SELL_NAME, 0, int(chart_width * 0.13), int(chart_height * 0.27), int(chart_width * 0.25), int(chart_height * 0.30));
+    btn_y_offset = btn_height_px * 2.85;
+    btnCancelSell.Create(0, BTN_CANCEL_SELL_NAME, 0, int(btn_sell_x_start), int(btn_y_start + btn_y_offset), int(btn_sell_x_start + btn_width_sell_px), int(btn_y_start + btn_y_offset + btn_height_px));
     btnCancelSell.Text("Cancel Sell Order");
-    btnCancelSell.Color(clrDarkRed);
-    btnCancelSell.ColorBackground(C'242, 220, 162');
-    btnCancelSell.ColorBorder(C'41,39,38');
+    btnCancelSell.Color(BtnSellBorderColor);
+    btnCancelSell.ColorBackground(BtnSellCancelBackColor);
+    btnCancelSell.ColorBorder(BtnSellBorderColor);
     btnCancelSell.FontSize(7);
     ObjectSetString(0, BTN_CANCEL_SELL_NAME, OBJPROP_TOOLTIP, "Cancel Pending Order");
 
-    btnCloseSell.Create(0, BTN_CLOSE_SELL_NAME, 0, int(chart_width * 0.13), int(chart_height * 0.30), int(chart_width * 0.25), int(chart_height * 0.34));
+    btn_y_offset = btn_height_px * 3.75;
+    btnCloseSell.Create(0, BTN_CLOSE_SELL_NAME, 0, int(btn_sell_x_start), int(btn_y_start + btn_y_offset), int(btn_sell_x_start + btn_width_sell_px), int(btn_y_start + btn_y_offset + btn_height_px));
     btnCloseSell.Text("Close Sell");
-    btnCloseSell.Color(clrDarkRed);
+    btnCloseSell.Color(BtnSellBorderColor);
     btnCloseSell.ColorBackground(clrWhite);
-    btnCloseSell.ColorBorder(C'41,39,38');
+    btnCloseSell.ColorBorder(BtnSellBorderColor);
     btnCloseSell.FontSize(9);
     ObjectSetString(0, BTN_CLOSE_SELL_NAME, OBJPROP_TOOLTIP, "Close Sell First");
 
@@ -358,7 +387,6 @@ void OnTick()
     ObjectSetString(0,BTN_BUY_NAME,OBJPROP_TOOLTIP,strBuy);
     ObjectSetString(0,BTN_BUY_STOP_NAME,OBJPROP_TOOLTIP,"Buy Stop");
     ObjectSetString(0,BTN_BUY_LIMIT_NAME,OBJPROP_TOOLTIP,"Buy Limit");
-
 
     string strSell = "Sell giá: " + DoubleToString(SymbolInfoDouble(_Symbol, SYMBOL_BID),5);
     ObjectSetString(0,BTN_SELL_NAME,OBJPROP_TOOLTIP,strSell);
